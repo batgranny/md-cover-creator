@@ -1,0 +1,163 @@
+:root {
+  /* Default to Dark (VS Code style) */
+  --bg-color: #1e1e1e;
+  --bg-secondary: #252526;
+  --text-primary: #d4d4d4;
+  --text-secondary: #aaaaaa;
+  --accent-color: #007acc;
+  --accent-hover: #0062a3;
+  --glass-bg: rgba(37, 37, 38, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --input-bg: #3c3c3c;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --sidebar-bg: #252526;
+}
+
+[data-theme="light"] {
+  --bg-color: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #007acc;
+  --accent-hover: #005fa3;
+  --glass-bg: rgba(243, 243, 243, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --input-bg: #ffffff;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --sidebar-bg: #f3f3f3;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  justify-content: center;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* VS Code font preference */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  /* VS Code is squarer */
+  box-shadow: var(--card-shadow);
+}
+
+h1 {
+  font-size: 2.5em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 0.5em;
+}
+
+button {
+  border-radius: 4px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--accent-color);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+button:hover {
+  background-color: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input {
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  padding: 0.6em 1em;
+  font-size: 1rem;
+  color: var(--text-primary);
+  width: 100%;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 1rem;
+  text-align: left;
+  margin-top: 2rem;
+  height: 80vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--sidebar-bg);
+  /* Explicit sidebar bg */
+  overflow-y: auto;
+}
+
+.editor-area {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+}
+
+.search-result {
+  padding: 0.5rem;
+  margin-bottom: 0.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.search-result:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .search-result:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+  background: var(--glass-border);
+}
