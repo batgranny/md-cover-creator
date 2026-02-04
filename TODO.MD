@@ -5,5 +5,23 @@
 5. ~~create a colour picker for selecting the background colour~~ ✅
 6. ~~create a colour picker for selecting the text colour~~ ✅
 7. ~~The spine text should have the artist name on the far left (top) and the album title on the far right (bottom). The spine text should be in the anton font. Remove the artist name and title from the main editor window. The file chooser is larger than the artist name and title textboxes, make it the same size. The dimensions boxes should be in their own section which should be collapsable. The default position should be collapsed. The clear progress and colour pickers should be moved to their own section~~ ✅
-The spine text should be in uppercase
-The colourpicker for text and background should show the current co
+8. ~~The spine text should be in uppercase~~ ✅
+9. ~~The colourpicker for text and background colour should show the current colour for those elements in the little box next to the colour picker~~ ✅
+10. ~~The track duration should be removed from the tracklisting on the inside panel~~ ✅
+11. ~~there should be a blank line between the title and the tracklist on the inside panel~~ ✅
+12. ~~the album title should be centered on the inside panel and it should be larger than the tracklist~~ ✅
+13. ~~the tracklist should be in the anton font and centered~~ ✅
+14. ~~In addition to the crop marks on the pdf there should be fold marks to mark wherer to make the folds for the spine and the inside panel.  similar to the crop marks these should be outside the main image area~~ ✅
+15. ~~In the PDF the artist name in the tab is in a different position to what is shown in the editor. fix that~~ ✅
+16. ~~on the inside panel the album title should be in the anton font 23px and there should be more seperation between the album title and the tracklist~~ ✅
+17. ~~the album title in the inside panel is waay too big. make it smaller to fit in the panel. in the pdf remove the red border and the dashed blue fold lines~~ ✅
+18. ~~increase the font size of the tracklisting on the inside panel~~ ✅
+19. ~~the download does not appear in the download section of the browser, fix that.~~ ✅
+20. ~~increase the line padding of the tracklisting to increase the seperation between tracks~~ ✅
+21. ~~the artist name on the spine should be closer to the top (left) and the album title should be closer to the bottom (right) but with a small amount of padding so that they don't touch the edges~~ ✅
+22. ~~the download no longer works. The file name is incorrect (just a string of random characters) with no file type extension. Also, I cannot click the file name to open the file, or the file icon to view the file in the downloaded location~~ ✅
+
+
+
+
+

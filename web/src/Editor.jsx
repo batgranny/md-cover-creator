@@ -366,11 +366,11 @@ function Editor(props) {
 
         // Artist on left (top when rotated)
         ctx.textAlign = 'left';
-        ctx.fillText(artistName, -dimensions().spineHeight / 2 + 5, 0);
+        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0);
 
         // Title on right (bottom when rotated)
         ctx.textAlign = 'right';
-        ctx.fillText(albumTitle, dimensions().spineHeight / 2 - 5, 0);
+        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0);
         ctx.restore();
 
         // Rear Tab Text (Far Left)
@@ -401,18 +401,18 @@ function Editor(props) {
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            ctx.font = 'bold 3px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(albumTitle, 2, 4);
+            ctx.font = '8px \'Anton\', sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.6px sans-serif';
-            let currentY = 8;
-            const lineHeight = 4.4;
+            ctx.font = '3.2px \'Anton\', sans-serif';
+            ctx.textAlign = 'center';
+            let currentY = 16;
+            const lineHeight = 4.5;
 
             tracks.forEach((track, i) => {
                 if (currentY > dimensions().frontHeight - 2) return;
-                const duration = track.length ? ` (${Math.floor(track.length / 60000)}:${String(Math.floor((track.length % 60000) / 1000)).padStart(2, '0')})` : '';
-                ctx.fillText(`${i + 1}. ${track.title}${duration}`, 2, currentY);
+                ctx.fillText(`${i + 1}. ${track.title}`, dimensions().insideWidth / 2, currentY);
                 currentY += lineHeight;
             });
             ctx.restore();
@@ -479,17 +479,17 @@ function Editor(props) {
 
         // Artist on left (top when rotated)
         ctx.textAlign = 'left';
-        ctx.fillText(artistName, -dimensions().spineHeight / 2 + 5, 0);
+        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0);
 
         // Title on right (bottom when rotated)
         ctx.textAlign = 'right';
-        ctx.fillText(albumTitle, dimensions().spineHeight / 2 - 5, 0);
+        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0);
         ctx.restore();
 
         // Rear Tab Text (Far Left)
         ctx.save();
-        const rearX = dimensions().backWidth / 2;
-        const rearY = dimensions().backHeight - 5;
+        const rearX = dimensions().backWidth / 1.6;
+        const rearY = dimensions().backHeight - 1;
         ctx.translate(rearX, rearY);
         ctx.rotate(-Math.PI / 2);
         ctx.fillStyle = textColor();
@@ -507,18 +507,18 @@ function Editor(props) {
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            ctx.font = 'bold 3px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(albumTitle, 2, 4);
+            ctx.font = '8px \'Anton\', sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.6px sans-serif';
-            let currentY = 8;
-            const lineHeight = 4.4;
+            ctx.font = '3.2px \'Anton\', sans-serif';
+            ctx.textAlign = 'center';
+            let currentY = 16;
+            const lineHeight = 4.5;
 
             tracks.forEach((track, i) => {
                 if (currentY > dimensions().frontHeight - 2) return;
-                const duration = track.length ? ` (${Math.floor(track.length / 60000)}:${String(Math.floor((track.length % 60000) / 1000)).padStart(2, '0')})` : '';
-                ctx.fillText(`${i + 1}. ${track.title}${duration}`, 2, currentY);
+                ctx.fillText(`${i + 1}. ${track.title}`, dimensions().insideWidth / 2, currentY);
                 currentY += lineHeight;
             });
             ctx.restore();
@@ -527,12 +527,15 @@ function Editor(props) {
         const imgData = printCanvas.toDataURL('image/jpeg', 1.0);
         doc.addImage(imgData, 'JPEG', x - b, y - b, totalW + b * 2, totalH + b * 2);
 
-        doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.1); doc.rect(x, y, totalW, totalH);
-        doc.setDrawColor(0, 100, 200); doc.setLineDashPattern([1, 1], 0);
-        let fx = x + dimensions().backWidth; doc.line(fx, y, fx, y + totalH);
-        fx += dimensions().spineWidth; doc.line(fx, y, fx, y + totalH);
-        fx += dimensions().frontWidth; doc.line(fx, y, fx, y + totalH);
-        doc.setLineDashPattern([], 0);
+        // Removed: Red border rectangle
+        // doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.1); doc.rect(x, y, totalW, totalH);
+
+        // Removed: Dashed blue fold lines
+        // doc.setDrawColor(0, 100, 200); doc.setLineDashPattern([1, 1], 0);
+        // let fx = x + dimensions().backWidth; doc.line(fx, y, fx, y + totalH);
+        // fx += dimensions().spineWidth; doc.line(fx, y, fx, y + totalH);
+        // fx += dimensions().frontWidth; doc.line(fx, y, fx, y + totalH);
+        // doc.setLineDashPattern([], 0);
 
         doc.setDrawColor(0); doc.setLineWidth(0.1);
         const cl = 5; const co = b + 2;
@@ -540,6 +543,21 @@ function Editor(props) {
         doc.line(x + totalW, y - co, x + totalW, y - co - cl); doc.line(x + totalW + co, y, x + totalW + co + cl, y);
         doc.line(x, y + totalH + co, x, y + totalH + co + cl); doc.line(x - co, y + totalH, x - co - cl, y + totalH);
         doc.line(x + totalW, y + totalH + co, x + totalW, y + totalH + co + cl); doc.line(x + totalW + co, y + totalH, x + totalW + co + cl, y + totalH);
+
+        // Fold marks (blue)
+        doc.setDrawColor(0, 0, 255);
+        doc.setLineWidth(0.05);
+        const foldMarkLength = 3;
+
+        // Spine fold (between rear tab and spine)
+        const spineFoldX = x + dimensions().backWidth;
+        doc.line(spineFoldX, y - co, spineFoldX, y - co - foldMarkLength);
+        doc.line(spineFoldX, y + totalH + co, spineFoldX, y + totalH + co + foldMarkLength);
+
+        // Front/Inside panel fold (between front and inside)
+        const insideFoldX = x + dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
+        doc.line(insideFoldX, y - co, insideFoldX, y - co - foldMarkLength);
+        doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
 
         // Save Logic
         const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
@@ -550,26 +568,17 @@ function Editor(props) {
             filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
         }
 
-        if (window.showSaveFilePicker) {
-            (async () => {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: filename,
-                        types: [{
-                            description: 'PDF Document',
-                            accept: { 'application/pdf': ['.pdf'] },
-                        }],
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(doc.output('arraybuffer'));
-                    await writable.close();
-                } catch (err) {
-                    console.error('Save cancelled or failed:', err);
-                }
-            })();
-        } else {
-            doc.save(filename);
-        }
+        // Manual download implementation - ensures browser respects filename
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     return (
@@ -619,6 +628,13 @@ function Editor(props) {
                 <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'center', 'flex-wrap': 'wrap' }}>
                     <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
                         Background:
+                        <div style={{
+                            width: '30px',
+                            height: '30px',
+                            background: backgroundColor(),
+                            border: '2px solid var(--text-secondary)',
+                            'border-radius': '4px'
+                        }}></div>
                         <input
                             type="color"
                             value={backgroundColor()}
@@ -629,6 +645,13 @@ function Editor(props) {
 
                     <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
                         Text:
+                        <div style={{
+                            width: '30px',
+                            height: '30px',
+                            background: textColor(),
+                            border: '2px solid var(--text-secondary)',
+                            'border-radius': '4px'
+                        }}></div>
                         <input
                             type="color"
                             value={textColor()}
