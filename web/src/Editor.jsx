@@ -13,12 +13,37 @@ const DEFAULTS = {
     bleed: 3
 };
 
+// Local Storage Keys
+const STORAGE_KEYS = {
+    MANUAL_ARTIST: 'md-cover-manual-artist',
+    MANUAL_TITLE: 'md-cover-manual-title',
+    IMAGE_STATE: 'md-cover-image-state',
+    DIMENSIONS: 'md-cover-dimensions',
+    BG_COLOR: 'md-cover-bg-color',
+    TEXT_COLOR: 'md-cover-text-color',
+    UPLOADED_IMAGE: 'md-cover-uploaded-image'
+};
+
 function Editor(props) {
     const [dimensions, setDimensions] = createSignal({ ...DEFAULTS });
     const [zoom, setZoom] = createSignal(1.2);
 
     // Image State: x, y (mm), scale
     const [imgState, setImgState] = createSignal({ x: 0, y: 0, scale: 1.0 });
+
+    // Manual Input State
+    const [manualArtist, setManualArtist] = createSignal('');
+    const [manualTitle, setManualTitle] = createSignal('');
+
+    // Color State
+    const [backgroundColor, setBackgroundColor] = createSignal('#ffffff');
+    const [textColor, setTextColor] = createSignal('#000000');
+
+    // Image Selection State
+    const [imageSelected, setImageSelected] = createSignal(false);
+
+    // UI State
+    const [dimensionsExpanded, setDimensionsExpanded] = createSignal(false);
 
     let canvasRef;
     let imgObj = null;
@@ -29,6 +54,55 @@ function Editor(props) {
     let startDragMs = { x: 0, y: 0 };
     let startImgState = { x: 0, y: 0, scale: 1.0 };
 
+    // Helper functions to get artist/title with manual override
+    const getArtistName = () => {
+        return manualArtist() || props.release?.['artist-credit']?.[0]?.name || 'Artist Name';
+    };
+
+    const getAlbumTitle = () => {
+        return manualTitle() || props.release?.title || 'Album Title';
+    };
+
+    // Clear local storage and reset to defaults
+    const clearLocalStorage = () => {
+        if (confirm('Clear all saved progress? This cannot be undone.')) {
+            Object.values(STORAGE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
+            setManualArtist('');
+            setManualTitle('');
+            setDimensions({ ...DEFAULTS });
+            setBackgroundColor('#ffffff');
+            setTextColor('#000000');
+            setImgState({ x: 0, y: 0, scale: 1.0 });
+            imgObj = null;
+            draw();
+        }
+    };
+
+    // Image upload handler
+    const handleImageUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                imgObj = img;
+                setImageSelected(true);
+                setImgState({ x: 0, y: 0, scale: 1.0 });
+
+                // Save to localStorage
+                localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, event.target.result);
+
+                draw();
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
     // Load image when release changes
     createEffect(() => {
         if (props.release) {
@@ -37,6 +111,7 @@ function Editor(props) {
             img.src = `https://coverartarchive.org/release/${props.release.id}/front`;
             img.onload = () => {
                 imgObj = img;
+                setImageSelected(false);
                 setImgState({ x: 0, y: 0, scale: 1.0 });
                 draw();
             };
@@ -46,6 +121,63 @@ function Editor(props) {
                 draw();
             };
         }
+    });
+
+    // Load from localStorage on mount
+    onMount(() => {
+        try {
+            const savedArtist = localStorage.getItem(STORAGE_KEYS.MANUAL_ARTIST);
+            const savedTitle = localStorage.getItem(STORAGE_KEYS.MANUAL_TITLE);
+            const savedDimensions = localStorage.getItem(STORAGE_KEYS.DIMENSIONS);
+            const savedBgColor = localStorage.getItem(STORAGE_KEYS.BG_COLOR);
+            const savedTextColor = localStorage.getItem(STORAGE_KEYS.TEXT_COLOR);
+            const savedImageState = localStorage.getItem(STORAGE_KEYS.IMAGE_STATE);
+            const savedImage = localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
+
+            if (savedArtist) setManualArtist(savedArtist);
+            if (savedTitle) setManualTitle(savedTitle);
+            if (savedDimensions) setDimensions(JSON.parse(savedDimensions));
+            if (savedBgColor) setBackgroundColor(savedBgColor);
+            if (savedTextColor) setTextColor(savedTextColor);
+            if (savedImageState) setImgState(JSON.parse(savedImageState));
+
+            // Load uploaded image from base64
+            if (savedImage) {
+                const img = new Image();
+                img.onload = () => {
+                    imgObj = img;
+                    draw();
+                };
+                img.src = savedImage;
+            }
+        } catch (err) {
+            console.error('Error loading from localStorage:', err);
+        }
+    });
+
+    // Auto-save to localStorage on changes
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.MANUAL_ARTIST, manualArtist());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitle());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.DIMENSIONS, JSON.stringify(dimensions()));
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.BG_COLOR, backgroundColor());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
     });
 
     createEffect(() => {
@@ -84,11 +216,26 @@ function Editor(props) {
         if (!geo) return;
 
         const tol = 2 / zoom();
-        if (Math.abs(mmPos.x - geo.x) < tol && Math.abs(mmPos.y - geo.y) < tol) activeHandle = 'tl';
-        else if (Math.abs(mmPos.x - (geo.x + geo.w)) < tol && Math.abs(mmPos.y - geo.y) < tol) activeHandle = 'tr';
-        else if (Math.abs(mmPos.x - geo.x) < tol && Math.abs(mmPos.y - (geo.y + geo.h)) < tol) activeHandle = 'bl';
-        else if (Math.abs(mmPos.x - (geo.x + geo.w)) < tol && Math.abs(mmPos.y - (geo.y + geo.h)) < tol) activeHandle = 'br';
-        else if (mmPos.x > geo.x && mmPos.x < geo.x + geo.w && mmPos.y > geo.y && mmPos.y < geo.y + geo.h) activeHandle = 'move';
+
+        // Check if clicking on resize handles (only if image is selected)
+        if (imageSelected()) {
+            if (Math.abs(mmPos.x - geo.x) < tol && Math.abs(mmPos.y - geo.y) < tol) activeHandle = 'tl';
+            else if (Math.abs(mmPos.x - (geo.x + geo.w)) < tol && Math.abs(mmPos.y - geo.y) < tol) activeHandle = 'tr';
+            else if (Math.abs(mmPos.x - geo.x) < tol && Math.abs(mmPos.y - (geo.y + geo.h)) < tol) activeHandle = 'bl';
+            else if (Math.abs(mmPos.x - (geo.x + geo.w)) < tol && Math.abs(mmPos.y - (geo.y + geo.h)) < tol) activeHandle = 'br';
+        }
+
+        // Check if clicking on image body
+        if (mmPos.x > geo.x && mmPos.x < geo.x + geo.w && mmPos.y > geo.y && mmPos.y < geo.y + geo.h) {
+            if (!activeHandle) {
+                activeHandle = 'move';
+            }
+            setImageSelected(true);
+        } else {
+            // Clicked outside image
+            setImageSelected(false);
+            return;
+        }
 
         if (activeHandle) {
             isDragging = true;
@@ -145,7 +292,7 @@ function Editor(props) {
         ctx.scale(scale, scale);
         ctx.translate(b, b);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = backgroundColor();
         ctx.fillRect(-b, -b, totalW + b * 2, totalH + b * 2);
 
         if (imgObj) {
@@ -159,23 +306,26 @@ function Editor(props) {
             ctx.drawImage(imgObj, imgAreaX + geo.x, geo.y, geo.w, geo.h);
             ctx.restore();
 
-            ctx.save();
-            ctx.translate(imgAreaX, 0);
-            ctx.strokeStyle = '#00aaff';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(geo.x, geo.y, geo.w, geo.h);
+            // Only show bounding box when image is selected
+            if (imageSelected()) {
+                ctx.save();
+                ctx.translate(imgAreaX, 0);
+                ctx.strokeStyle = '#00aaff';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(geo.x, geo.y, geo.w, geo.h);
 
-            const hw = 1.5;
-            ctx.fillStyle = '#ffffff';
-            const drawHandle = (hx, hy) => {
-                ctx.fillRect(hx - hw, hy - hw, hw * 2, hw * 2);
-                ctx.strokeRect(hx - hw, hy - hw, hw * 2, hw * 2);
-            };
-            drawHandle(geo.x, geo.y);
-            drawHandle(geo.x + geo.w, geo.y);
-            drawHandle(geo.x, geo.y + geo.h);
-            drawHandle(geo.x + geo.w, geo.y + geo.h);
-            ctx.restore();
+                const hw = 1.5;
+                ctx.fillStyle = '#ffffff';
+                const drawHandle = (hx, hy) => {
+                    ctx.fillRect(hx - hw, hy - hw, hw * 2, hw * 2);
+                    ctx.strokeRect(hx - hw, hy - hw, hw * 2, hw * 2);
+                };
+                drawHandle(geo.x, geo.y);
+                drawHandle(geo.x + geo.w, geo.y);
+                drawHandle(geo.x, geo.y + geo.h);
+                drawHandle(geo.x + geo.w, geo.y + geo.h);
+                ctx.restore();
+            }
         }
 
         ctx.lineWidth = 0.3;
@@ -199,45 +349,50 @@ function Editor(props) {
         ctx.strokeRect(-b, -b, totalW + b * 2, totalH + b * 2);
         ctx.setLineDash([]);
 
-        if (props.release) {
-            const artistName = props.release['artist-credit']?.[0]?.name || 'Unknown Artist';
-            const albumTitle = props.release.title;
+        // Use manual input or MusicBrainz data
+        const artistName = getArtistName();
+        const albumTitle = getAlbumTitle();
 
-            // Spine Text
-            ctx.save();
-            const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
-            const spineY = dimensions().spineHeight / 2;
-            ctx.translate(spineX, spineY);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = '#000';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
-            ctx.font = `${fontSize}px sans-serif`;
-            ctx.fillText(`${artistName} - ${albumTitle}`, 0, 0);
-            ctx.restore();
+        // Spine Text - Artist on left (top), Title on right (bottom)
+        ctx.save();
+        const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
+        const spineY = dimensions().spineHeight / 2;
+        ctx.translate(spineX, spineY);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillStyle = textColor();
+        ctx.textBaseline = 'middle';
+        const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
+        ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
-            // Rear Tab Text (Far Left)
-            // Artist name, Anton font, bottom to top
-            ctx.save();
-            // Center horizontally in the tab
-            const rearX = dimensions().backWidth / 1.6;
-            // Move Y to bottom edge minus padding
-            const rearY = dimensions().backHeight - 1;
+        // Artist on left (top when rotated)
+        ctx.textAlign = 'left';
+        ctx.fillText(artistName, -dimensions().spineHeight / 2 + 5, 0);
 
-            ctx.translate(rearX, rearY);
-            ctx.rotate(-Math.PI / 2);
+        // Title on right (bottom when rotated)
+        ctx.textAlign = 'right';
+        ctx.fillText(albumTitle, dimensions().spineHeight / 2 - 5, 0);
+        ctx.restore();
 
-            ctx.fillStyle = '#000';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
+        // Rear Tab Text (Far Left)
+        // Artist name, Anton font, bottom to top
+        ctx.save();
+        // Center horizontally in the tab
+        const rearX = dimensions().backWidth / 1.6;
+        // Move Y to bottom edge minus padding
+        const rearY = dimensions().backHeight - 1;
 
-            // Fit to tab width (backWidth default 11mm).
-            const antonSize = dimensions().backWidth * 0.9;
-            ctx.font = `${antonSize}px 'Anton', sans-serif`;
-            ctx.fillText(artistName.toUpperCase(), 0, 0);
-            ctx.restore();
-        }
+        ctx.translate(rearX, rearY);
+        ctx.rotate(-Math.PI / 2);
+
+        ctx.fillStyle = textColor();
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        // Fit to tab width (backWidth default 11mm).
+        const antonSize = dimensions().backWidth * 0.9;
+        ctx.font = `${antonSize}px 'Anton', sans-serif`;
+        ctx.fillText(artistName.toUpperCase(), 0, 0);
+        ctx.restore();
 
         if (props.release?.media?.[0]?.tracks?.length > 0) {
             const tracks = props.release.media[0].tracks;
@@ -245,10 +400,10 @@ function Editor(props) {
             const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
             ctx.translate(panelX, 0);
 
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = textColor();
             ctx.font = 'bold 3px sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(props.release.title, 2, 4);
+            ctx.fillText(albumTitle, 2, 4);
 
             ctx.font = '3.6px sans-serif';
             let currentY = 8;
@@ -292,7 +447,7 @@ function Editor(props) {
         ctx.scale(3.7795 * scale, 3.7795 * scale);
         ctx.translate(b, b);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = backgroundColor();
         ctx.fillRect(-b, -b, totalW + b * 2, totalH + b * 2);
 
         if (imgObj) {
@@ -307,38 +462,43 @@ function Editor(props) {
             ctx.restore();
         }
 
-        if (props.release) {
-            const artistName = props.release['artist-credit']?.[0]?.name || 'Unknown Artist';
-            const albumTitle = props.release.title;
+        // Use manual input or MusicBrainz data
+        const artistName = getArtistName();
+        const albumTitle = getAlbumTitle();
 
-            // Spine Text
-            ctx.save();
-            const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
-            const spineY = dimensions().spineHeight / 2;
-            ctx.translate(spineX, spineY);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = '#000';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
-            ctx.font = `${fontSize}px sans-serif`;
-            ctx.fillText(`${artistName} - ${albumTitle}`, 0, 0);
-            ctx.restore();
+        // Spine Text - Artist on left (top), Title on right (bottom)
+        ctx.save();
+        const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
+        const spineY = dimensions().spineHeight / 2;
+        ctx.translate(spineX, spineY);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillStyle = textColor();
+        ctx.textBaseline = 'middle';
+        const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
+        ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
-            // Rear Tab Text (Far Left)
-            ctx.save();
-            const rearX = dimensions().backWidth / 2;
-            const rearY = dimensions().backHeight - 5;
-            ctx.translate(rearX, rearY);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = '#000';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            const antonSize = dimensions().backWidth * 0.9;
-            ctx.font = `${antonSize}px 'Anton', sans-serif`;
-            ctx.fillText(artistName.toUpperCase(), 0, 0);
-            ctx.restore();
-        }
+        // Artist on left (top when rotated)
+        ctx.textAlign = 'left';
+        ctx.fillText(artistName, -dimensions().spineHeight / 2 + 5, 0);
+
+        // Title on right (bottom when rotated)
+        ctx.textAlign = 'right';
+        ctx.fillText(albumTitle, dimensions().spineHeight / 2 - 5, 0);
+        ctx.restore();
+
+        // Rear Tab Text (Far Left)
+        ctx.save();
+        const rearX = dimensions().backWidth / 2;
+        const rearY = dimensions().backHeight - 5;
+        ctx.translate(rearX, rearY);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = textColor();
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const antonSize = dimensions().backWidth * 0.9;
+        ctx.font = `${antonSize}px 'Anton', sans-serif`;
+        ctx.fillText(artistName.toUpperCase(), 0, 0);
+        ctx.restore();
 
         if (props.release?.media?.[0]?.tracks?.length > 0) {
             const tracks = props.release.media[0].tracks;
@@ -346,10 +506,10 @@ function Editor(props) {
             const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
             ctx.translate(panelX, 0);
 
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = textColor();
             ctx.font = 'bold 3px sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(props.release.title, 2, 4);
+            ctx.fillText(albumTitle, 2, 4);
 
             ctx.font = '3.6px sans-serif';
             let currentY = 8;
@@ -414,15 +574,96 @@ function Editor(props) {
 
     return (
         <div class="editor-container">
-            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem', display: 'flex', gap: '1rem', 'justify-content': 'center', 'flex-wrap': 'wrap' }}>
-                <label>Rear (mm): <input type="number" value={dimensions().backWidth} onInput={(e) => setDimensions({ ...dimensions(), backWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                <label>Spine (mm): <input type="number" value={dimensions().spineWidth} onInput={(e) => setDimensions({ ...dimensions(), spineWidth: Number(e.target.value) })} style={{ width: '40px' }} /></label>
-                <label>Front (mm): <input type="number" value={dimensions().frontWidth} onInput={(e) => setDimensions({ ...dimensions(), frontWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                <label>Inside (mm): <input type="number" value={dimensions().insideWidth} onInput={(e) => setDimensions({ ...dimensions(), insideWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                <label>Height (mm): <input type="number" value={dimensions().frontHeight} onInput={(e) => { const val = Number(e.target.value); setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val }) }} style={{ width: '50px' }} /></label>
-                <div style={{ 'margin-left': '1rem', 'display': 'flex', 'align-items': 'center', 'gap': '0.5rem' }}>
-                    <small>Drag handles to resize, drag image to move</small>
+            {/* Manual Input Controls */}
+            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
+                <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '1rem', 'align-items': 'end' }}>
+                    <div>
+                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Artist Name (optional):</label>
+                        <input
+                            type="text"
+                            placeholder="Override MusicBrainz artist..."
+                            value={manualArtist()}
+                            onInput={(e) => setManualArtist(e.target.value)}
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Album Title (optional):</label>
+                        <input
+                            type="text"
+                            placeholder="Override MusicBrainz title..."
+                            value={manualTitle()}
+                            onInput={(e) => setManualTitle(e.target.value)}
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Upload Cover Image:</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            style={{ width: '100%', height: '38px', padding: '0.5rem', 'box-sizing': 'border-box' }}
+                        />
+                    </div>
                 </div>
+                <div style={{ 'margin-top': '0.5rem', 'font-size': '0.85em', color: 'var(--text-secondary)' }}>
+                    <small>💡 Manual inputs override MusicBrainz data. Click image to select/deselect and show resize handles.</small>
+                </div>
+            </div>
+
+            {/* Color Pickers and Clear Progress */}
+            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'center', 'flex-wrap': 'wrap' }}>
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
+                        Background:
+                        <input
+                            type="color"
+                            value={backgroundColor()}
+                            onInput={(e) => setBackgroundColor(e.target.value)}
+                            style={{ width: '40px', height: '30px', cursor: 'pointer' }}
+                        />
+                    </label>
+
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
+                        Text:
+                        <input
+                            type="color"
+                            value={textColor()}
+                            onInput={(e) => setTextColor(e.target.value)}
+                            style={{ width: '40px', height: '30px', cursor: 'pointer' }}
+                        />
+                    </label>
+
+                    <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>
+
+                    <button onClick={clearLocalStorage} style={{ padding: '0.5rem 1rem', background: '#e74c3c', color: 'white', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}>
+                        Clear Progress
+                    </button>
+                </div>
+            </div>
+
+            {/* Collapsible Dimension Controls */}
+            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
+                <div
+                    onClick={() => setDimensionsExpanded(!dimensionsExpanded())}
+                    style={{ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'user-select': 'none' }}
+                >
+                    <strong>Dimensions (mm)</strong>
+                    <span style={{ 'font-size': '1.2em' }}>{dimensionsExpanded() ? '▼' : '▶'}</span>
+                </div>
+
+                {dimensionsExpanded() && (
+                    <div style={{ 'margin-top': '1rem', display: 'flex', gap: '1rem', 'flex-wrap': 'wrap', 'justify-content': 'center' }}>
+                        <label>Rear: <input type="number" value={dimensions().backWidth} onInput={(e) => setDimensions({ ...dimensions(), backWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                        <label>Spine: <input type="number" value={dimensions().spineWidth} onInput={(e) => setDimensions({ ...dimensions(), spineWidth: Number(e.target.value) })} style={{ width: '40px' }} /></label>
+                        <label>Front: <input type="number" value={dimensions().frontWidth} onInput={(e) => setDimensions({ ...dimensions(), frontWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                        <label>Inside: <input type="number" value={dimensions().insideWidth} onInput={(e) => setDimensions({ ...dimensions(), insideWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                        <label>Height: <input type="number" value={dimensions().frontHeight} onInput={(e) => { const val = Number(e.target.value); setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val }) }} style={{ width: '50px' }} /></label>
+                    </div>
+                )}
             </div>
 
             <div

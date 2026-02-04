@@ -97,12 +97,7 @@ function App() {
 
         <main class="glass-card editor-area">
           {selectedRelease() ? (
-            <div style={{ 'text-align': 'center', width: '100%' }}>
-              <h2>{selectedRelease().title}</h2>
-              <p>{selectedRelease()['artist-credit']?.[0]?.name}</p>
-
-              <Editor release={selectedRelease()} />
-            </div>
+            <Editor release={selectedRelease()} />
           ) : (
             <p style={{ color: 'var(--text-secondary)' }}>Select an album to start designing</p>
           )}
