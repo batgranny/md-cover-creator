@@ -412,7 +412,16 @@ function Editor(props) {
         doc.line(x, y + totalH + co, x, y + totalH + co + cl); doc.line(x - co, y + totalH, x - co - cl, y + totalH);
         doc.line(x + totalW, y + totalH + co, x + totalW, y + totalH + co + cl); doc.line(x + totalW + co, y + totalH, x + totalW + co + cl, y + totalH);
 
-        doc.save(`${props.release?.title || 'minidisc-cover'}.pdf`);
+        const safeName = (str) => (str || '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        let filename = 'minidisc-cover-jcard.pdf';
+
+        if (props.release) {
+            const artist = props.release['artist-credit']?.[0]?.name || 'unknown';
+            const album = props.release.title || 'untitled';
+            filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
+        }
+
+        doc.save(filename);
     };
 
     return (
