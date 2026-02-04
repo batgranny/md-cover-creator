@@ -220,10 +220,10 @@ function Editor(props) {
             // Rear Tab Text (Far Left)
             // Artist name, Anton font, bottom to top
             ctx.save();
-            // Move X to right edge of tab (spine fold) minus padding
-            const rearX = dimensions().backWidth - 2.5;
+            // Center horizontally in the tab
+            const rearX = dimensions().backWidth / 1.6;
             // Move Y to bottom edge minus padding
-            const rearY = dimensions().backHeight - 5;
+            const rearY = dimensions().backHeight - 1;
 
             ctx.translate(rearX, rearY);
             ctx.rotate(-Math.PI / 2);
@@ -232,7 +232,7 @@ function Editor(props) {
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
 
-            // Fit to tab width (mostly)
+            // Fit to tab width (backWidth default 11mm).
             const antonSize = dimensions().backWidth * 0.9;
             ctx.font = `${antonSize}px 'Anton', sans-serif`;
             ctx.fillText(artistName.toUpperCase(), 0, 0);
@@ -327,7 +327,7 @@ function Editor(props) {
 
             // Rear Tab Text (Far Left)
             ctx.save();
-            const rearX = dimensions().backWidth - 2.5;
+            const rearX = dimensions().backWidth / 2;
             const rearY = dimensions().backHeight - 5;
             ctx.translate(rearX, rearY);
             ctx.rotate(-Math.PI / 2);
