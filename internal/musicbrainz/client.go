@@ -107,7 +107,7 @@ func (c *Client) GetRelease(id string) (*ReleaseDetail, error) {
 		return nil, err
 	}
 	q := u.Query()
-	q.Set("inc", "recordings") // Include recordings to get tracks
+	q.Set("inc", "recordings artist-credits") // Include recordings and artist-credits
 	q.Set("fmt", "json")
 	u.RawQuery = q.Encode()
 

@@ -200,6 +200,10 @@ function Editor(props) {
         ctx.setLineDash([]);
 
         if (props.release) {
+            const artistName = props.release['artist-credit']?.[0]?.name || 'Unknown Artist';
+            const albumTitle = props.release.title;
+
+            // Spine Text
             ctx.save();
             const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
             const spineY = dimensions().spineHeight / 2;
@@ -210,7 +214,28 @@ function Editor(props) {
             ctx.textBaseline = 'middle';
             const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
             ctx.font = `${fontSize}px sans-serif`;
-            ctx.fillText(`${props.release['artist-credit']?.[0]?.name} - ${props.release.title}`, 0, 0);
+            ctx.fillText(`${artistName} - ${albumTitle}`, 0, 0);
+            ctx.restore();
+
+            // Rear Tab Text (Far Left)
+            // Artist name, Anton font, bottom to top
+            ctx.save();
+            // Move X to right edge of tab (spine fold) minus padding
+            const rearX = dimensions().backWidth - 2.5;
+            // Move Y to bottom edge minus padding
+            const rearY = dimensions().backHeight - 5;
+
+            ctx.translate(rearX, rearY);
+            ctx.rotate(-Math.PI / 2);
+
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            // Fit to tab width (mostly)
+            const antonSize = dimensions().backWidth * 0.9;
+            ctx.font = `${antonSize}px 'Anton', sans-serif`;
+            ctx.fillText(artistName.toUpperCase(), 0, 0);
             ctx.restore();
         }
 
@@ -283,6 +308,10 @@ function Editor(props) {
         }
 
         if (props.release) {
+            const artistName = props.release['artist-credit']?.[0]?.name || 'Unknown Artist';
+            const albumTitle = props.release.title;
+
+            // Spine Text
             ctx.save();
             const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
             const spineY = dimensions().spineHeight / 2;
@@ -293,7 +322,21 @@ function Editor(props) {
             ctx.textBaseline = 'middle';
             const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
             ctx.font = `${fontSize}px sans-serif`;
-            ctx.fillText(`${props.release['artist-credit']?.[0]?.name} - ${props.release.title}`, 0, 0);
+            ctx.fillText(`${artistName} - ${albumTitle}`, 0, 0);
+            ctx.restore();
+
+            // Rear Tab Text (Far Left)
+            ctx.save();
+            const rearX = dimensions().backWidth - 2.5;
+            const rearY = dimensions().backHeight - 5;
+            ctx.translate(rearX, rearY);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const antonSize = dimensions().backWidth * 0.9;
+            ctx.font = `${antonSize}px 'Anton', sans-serif`;
+            ctx.fillText(artistName.toUpperCase(), 0, 0);
             ctx.restore();
         }
 
