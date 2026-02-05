@@ -20,6 +20,11 @@
 20. ~~increase the line padding of the tracklisting to increase the seperation between tracks~~ ✅
 21. ~~the artist name on the spine should be closer to the top (left) and the album title should be closer to the bottom (right) but with a small amount of padding so that they don't touch the edges~~ ✅
 22. ~~the download no longer works. The file name is incorrect (just a string of random characters) with no file type extension. Also, I cannot click the file name to open the file, or the file icon to view the file in the downloaded location~~ ✅
+23. ~~the spine text should be horizontally  centered in the spine area.  it should also be larger, but still fit in the spine area with some horizontal padding so that it doesn't touch the edges. maintain the current positioning for the artist name and album title on the spine~~ ✅
+24. ~~remove the album title from the inside panel but keep the tracklist in the same position~~ ✅
+25.  ~~move the album title and the artist name to the left by a few pixels so that the top edge of the text does not touch the fold mark~~ ✅
+26. ~~change the font of the tracklist to the actor font~~ ✅
+27. ~~the tracklist should be vertically centered in the inside panel~~ ✅
 
 
 

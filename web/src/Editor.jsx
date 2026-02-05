@@ -361,16 +361,16 @@ function Editor(props) {
         ctx.rotate(Math.PI / 2);
         ctx.fillStyle = textColor();
         ctx.textBaseline = 'middle';
-        const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
+        const fontSize = dimensions().spineWidth * 0.85;
         ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
         // Artist on left (top when rotated)
         ctx.textAlign = 'left';
-        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0);
+        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0.5);
 
         // Title on right (bottom when rotated)
         ctx.textAlign = 'right';
-        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0);
+        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0.5);
         ctx.restore();
 
         // Rear Tab Text (Far Left)
@@ -401,18 +401,53 @@ function Editor(props) {
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            ctx.font = '8px \'Anton\', sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
+            // Title removed by request
+            // ctx.font = '8px \'Anton\', sans-serif';
+            // ctx.textAlign = 'center';
+            // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.2px \'Anton\', sans-serif';
+            ctx.font = '3.2px \'Actor\', sans-serif';
             ctx.textAlign = 'center';
-            let currentY = 16;
             const lineHeight = 4.5;
+            const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
 
+            // Helper to wrap text
+            const wrapText = (text) => {
+                const words = text.split(' ');
+                let lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const width = ctx.measureText(currentLine + " " + words[i]).width;
+                    if (width < maxWidth) {
+                        currentLine += " " + words[i];
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    }
+                }
+                lines.push(currentLine);
+                return lines;
+            };
+
+            // Calculate all lines first
+            let allLines = [];
             tracks.forEach((track, i) => {
-                if (currentY > dimensions().frontHeight - 2) return;
-                ctx.fillText(`${i + 1}. ${track.title}`, dimensions().insideWidth / 2, currentY);
+                const fullText = `${i + 1}. ${track.title}`;
+                const lines = wrapText(fullText);
+                allLines.push(...lines);
+            });
+
+            // Calculate Start Y for vertical centering
+            const totalTextHeight = allLines.length * lineHeight;
+            // Center in total height (about 35mm), ensure fallback padding
+            let startY = (dimensions().frontHeight - totalTextHeight) / 2;
+            if (startY < 5) startY = 5; // Minimum top padding
+
+            // Draw Lines
+            let currentY = startY;
+            allLines.forEach(line => {
+                ctx.fillText(line, dimensions().insideWidth / 2, currentY);
                 currentY += lineHeight;
             });
             ctx.restore();
@@ -474,16 +509,16 @@ function Editor(props) {
         ctx.rotate(Math.PI / 2);
         ctx.fillStyle = textColor();
         ctx.textBaseline = 'middle';
-        const fontSize = Math.min(3, dimensions().spineWidth * 0.6);
+        const fontSize = dimensions().spineWidth * 0.85;
         ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
         // Artist on left (top when rotated)
         ctx.textAlign = 'left';
-        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0);
+        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0.5);
 
         // Title on right (bottom when rotated)
         ctx.textAlign = 'right';
-        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0);
+        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0.5);
         ctx.restore();
 
         // Rear Tab Text (Far Left)
@@ -507,18 +542,53 @@ function Editor(props) {
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            ctx.font = '8px \'Anton\', sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
+            // Title removed by request
+            // ctx.font = '8px \'Anton\', sans-serif';
+            // ctx.textAlign = 'center';
+            // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.2px \'Anton\', sans-serif';
+            ctx.font = '3.2px \'Actor\', sans-serif';
             ctx.textAlign = 'center';
-            let currentY = 16;
             const lineHeight = 4.5;
+            const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
 
+            // Helper to wrap text
+            const wrapText = (text) => {
+                const words = text.split(' ');
+                let lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const width = ctx.measureText(currentLine + " " + words[i]).width;
+                    if (width < maxWidth) {
+                        currentLine += " " + words[i];
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    }
+                }
+                lines.push(currentLine);
+                return lines;
+            };
+
+            // Calculate all lines first
+            let allLines = [];
             tracks.forEach((track, i) => {
-                if (currentY > dimensions().frontHeight - 2) return;
-                ctx.fillText(`${i + 1}. ${track.title}`, dimensions().insideWidth / 2, currentY);
+                const fullText = `${i + 1}. ${track.title}`;
+                const lines = wrapText(fullText);
+                allLines.push(...lines);
+            });
+
+            // Calculate Start Y for vertical centering
+            const totalTextHeight = allLines.length * lineHeight;
+            // Center in total height (frontHeight is ~35mm)
+            let startY = (dimensions().frontHeight - totalTextHeight) / 2;
+            if (startY < 5) startY = 5; // Minimum top padding
+
+            // Draw Lines
+            let currentY = startY;
+            allLines.forEach(line => {
+                ctx.fillText(line, dimensions().insideWidth / 2, currentY);
                 currentY += lineHeight;
             });
             ctx.restore();
@@ -553,6 +623,11 @@ function Editor(props) {
         const spineFoldX = x + dimensions().backWidth;
         doc.line(spineFoldX, y - co, spineFoldX, y - co - foldMarkLength);
         doc.line(spineFoldX, y + totalH + co, spineFoldX, y + totalH + co + foldMarkLength);
+
+        // Spine/Front fold (between spine and front cover)
+        const spineFrontFoldX = x + dimensions().backWidth + dimensions().spineWidth;
+        doc.line(spineFrontFoldX, y - co, spineFrontFoldX, y - co - foldMarkLength);
+        doc.line(spineFrontFoldX, y + totalH + co, spineFrontFoldX, y + totalH + co + foldMarkLength);
 
         // Front/Inside panel fold (between front and inside)
         const insideFoldX = x + dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
@@ -628,36 +703,55 @@ function Editor(props) {
                 <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'center', 'flex-wrap': 'wrap' }}>
                     <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
                         Background:
-                        <div style={{
-                            width: '30px',
-                            height: '30px',
-                            background: backgroundColor(),
-                            border: '2px solid var(--text-secondary)',
-                            'border-radius': '4px'
-                        }}></div>
-                        <input
-                            type="color"
-                            value={backgroundColor()}
-                            onInput={(e) => setBackgroundColor(e.target.value)}
-                            style={{ width: '40px', height: '30px', cursor: 'pointer' }}
-                        />
+
+
+                        <div style={{ position: 'relative', width: '30px', height: '30px' }}>
+                            <div style={{
+                                position: 'absolute',
+                                left: 0, top: 0,
+                                width: '100%', height: '100%',
+                                background: backgroundColor(),
+                                border: '2px solid var(--text-secondary)',
+                                'border-radius': '4px',
+                                'pointer-events': 'none'
+                            }}></div>
+                            <input
+                                type="color"
+                                value={backgroundColor()}
+                                onInput={(e) => setBackgroundColor(e.target.value)}
+                                style={{
+                                    width: '100%', height: '100%',
+                                    opacity: 0, cursor: 'pointer',
+                                    padding: 0, border: 'none'
+                                }}
+                            />
+                        </div>
                     </label>
 
                     <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
                         Text:
-                        <div style={{
-                            width: '30px',
-                            height: '30px',
-                            background: textColor(),
-                            border: '2px solid var(--text-secondary)',
-                            'border-radius': '4px'
-                        }}></div>
-                        <input
-                            type="color"
-                            value={textColor()}
-                            onInput={(e) => setTextColor(e.target.value)}
-                            style={{ width: '40px', height: '30px', cursor: 'pointer' }}
-                        />
+
+                        <div style={{ position: 'relative', width: '30px', height: '30px' }}>
+                            <div style={{
+                                position: 'absolute',
+                                left: 0, top: 0,
+                                width: '100%', height: '100%',
+                                background: textColor(),
+                                border: '2px solid var(--text-secondary)',
+                                'border-radius': '4px',
+                                'pointer-events': 'none'
+                            }}></div>
+                            <input
+                                type="color"
+                                value={textColor()}
+                                onInput={(e) => setTextColor(e.target.value)}
+                                style={{
+                                    width: '100%', height: '100%',
+                                    opacity: 0, cursor: 'pointer',
+                                    padding: 0, border: 'none'
+                                }}
+                            />
+                        </div>
                     </label>
 
                     <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>
