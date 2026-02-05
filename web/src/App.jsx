@@ -4,6 +4,7 @@ import Editor from './Editor';
 
 function App() {
   const [query, setQuery] = createSignal('');
+  const [artistQuery, setArtistQuery] = createSignal('');
   const [results, setResults] = createSignal([]);
   const [selectedRelease, setSelectedRelease] = createSignal(null);
   const [loading, setLoading] = createSignal(false);
@@ -21,7 +22,11 @@ function App() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query())}`);
+      let finalQuery = query();
+      if (artistQuery()) {
+        finalQuery = `release:${query()} AND artist:${artistQuery()}`;
+      }
+      const res = await fetch(`/api/search?q=${encodeURIComponent(finalQuery)}`);
       const data = await res.json();
       setResults(data.releases || []);
     } catch (err) {
@@ -59,14 +64,24 @@ function App() {
       <div class="layout">
         <aside class="glass-card sidebar">
           <h2>Search MusicBrainz</h2>
-          <form onSubmit={search} style={{ display: 'flex', gap: '0.5rem' }}>
+          <form onSubmit={search} style={{ display: 'flex', 'flex-direction': 'column', gap: '0.75rem' }}>
             <input
               type="text"
-              placeholder="Artist or Album..."
+              placeholder="Album..."
+              value={query()}
               value={query()}
               onInput={(e) => setQuery(e.target.value)}
+              style={{ width: '100%', 'box-sizing': 'border-box' }}
             />
-            <button type="submit" disabled={loading()}>
+            <input
+              type="text"
+              placeholder="Artist (Optional)..."
+              value={artistQuery()}
+              value={artistQuery()}
+              onInput={(e) => setArtistQuery(e.target.value)}
+              style={{ width: '100%', 'box-sizing': 'border-box' }}
+            />
+            <button type="submit" disabled={loading()} style={{ width: '100%' }}>
               {loading() ? '...' : 'Go'}
             </button>
           </form>

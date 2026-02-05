@@ -21,7 +21,9 @@ const STORAGE_KEYS = {
     DIMENSIONS: 'md-cover-dimensions',
     BG_COLOR: 'md-cover-bg-color',
     TEXT_COLOR: 'md-cover-text-color',
-    UPLOADED_IMAGE: 'md-cover-uploaded-image'
+    TEXT_COLOR: 'md-cover-text-color',
+    UPLOADED_IMAGE: 'md-cover-uploaded-image',
+    TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size'
 };
 
 function Editor(props) {
@@ -38,6 +40,8 @@ function Editor(props) {
     // Color State
     const [backgroundColor, setBackgroundColor] = createSignal('#ffffff');
     const [textColor, setTextColor] = createSignal('#000000');
+    // Tracklist Font Size State
+    const [tracklistFontSize, setTracklistFontSize] = createSignal(3.2);
 
     // Image Selection State
     const [imageSelected, setImageSelected] = createSignal(false);
@@ -73,7 +77,10 @@ function Editor(props) {
             setManualTitle('');
             setDimensions({ ...DEFAULTS });
             setBackgroundColor('#ffffff');
+            setDimensions({ ...DEFAULTS });
+            setBackgroundColor('#ffffff');
             setTextColor('#000000');
+            setTracklistFontSize(3.2);
             setImgState({ x: 0, y: 0, scale: 1.0 });
             imgObj = null;
             draw();
@@ -132,6 +139,7 @@ function Editor(props) {
             const savedBgColor = localStorage.getItem(STORAGE_KEYS.BG_COLOR);
             const savedTextColor = localStorage.getItem(STORAGE_KEYS.TEXT_COLOR);
             const savedImageState = localStorage.getItem(STORAGE_KEYS.IMAGE_STATE);
+            const savedFontSize = localStorage.getItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE);
             const savedImage = localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
 
             if (savedArtist) setManualArtist(savedArtist);
@@ -139,6 +147,7 @@ function Editor(props) {
             if (savedDimensions) setDimensions(JSON.parse(savedDimensions));
             if (savedBgColor) setBackgroundColor(savedBgColor);
             if (savedTextColor) setTextColor(savedTextColor);
+            if (savedFontSize) setTracklistFontSize(parseFloat(savedFontSize));
             if (savedImageState) setImgState(JSON.parse(savedImageState));
 
             // Load uploaded image from base64
@@ -174,6 +183,10 @@ function Editor(props) {
 
     createEffect(() => {
         localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE, tracklistFontSize());
     });
 
     createEffect(() => {
@@ -406,9 +419,9 @@ function Editor(props) {
             // ctx.textAlign = 'center';
             // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.2px \'Actor\', sans-serif';
+            ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
             ctx.textAlign = 'center';
-            const lineHeight = 4.5;
+            const lineHeight = tracklistFontSize() * 1.4;
             const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
 
             // Helper to wrap text
@@ -660,7 +673,7 @@ function Editor(props) {
         <div class="editor-container">
             {/* Manual Input Controls */}
             <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
-                <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '1rem', 'align-items': 'end' }}>
+                <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '2rem', 'align-items': 'end' }}>
                     <div>
                         <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Artist Name (optional):</label>
                         <input
@@ -668,7 +681,7 @@ function Editor(props) {
                             placeholder="Override MusicBrainz artist..."
                             value={manualArtist()}
                             onInput={(e) => setManualArtist(e.target.value)}
-                            style={{ width: '100%' }}
+                            style={{ width: '100%', 'box-sizing': 'border-box' }}
                         />
                     </div>
 
@@ -679,7 +692,7 @@ function Editor(props) {
                             placeholder="Override MusicBrainz title..."
                             value={manualTitle()}
                             onInput={(e) => setManualTitle(e.target.value)}
-                            style={{ width: '100%' }}
+                            style={{ width: '100%', 'box-sizing': 'border-box' }}
                         />
                     </div>
 
@@ -752,6 +765,21 @@ function Editor(props) {
                                 }}
                             />
                         </div>
+                    </label>
+
+                    <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>
+
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
+                        Size:
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="1"
+                            max="10"
+                            value={tracklistFontSize()}
+                            onInput={(e) => setTracklistFontSize(Number(e.target.value))}
+                            style={{ width: '50px', padding: '0.25rem' }}
+                        />
                     </label>
 
                     <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>

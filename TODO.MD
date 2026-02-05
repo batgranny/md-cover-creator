@@ -25,6 +25,8 @@
 25.  ~~move the album title and the artist name to the left by a few pixels so that the top edge of the text does not touch the fold mark~~ ✅
 26. ~~change the font of the tracklist to the actor font~~ ✅
 27. ~~the tracklist should be vertically centered in the inside panel~~ ✅
+28. ~~add the ability to set the font size for the tracklist~~ ✅
+29. ~~add optional artist filter to search~~ ✅
 
 
 
