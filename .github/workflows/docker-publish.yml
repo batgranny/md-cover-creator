@@ -3,6 +3,13 @@ name: Docker
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
 
 jobs:
   build:
