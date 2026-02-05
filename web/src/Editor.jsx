@@ -23,7 +23,11 @@ const STORAGE_KEYS = {
     TEXT_COLOR: 'md-cover-text-color',
     TEXT_COLOR: 'md-cover-text-color',
     UPLOADED_IMAGE: 'md-cover-uploaded-image',
-    TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size'
+    TEXT_COLOR: 'md-cover-text-color',
+    UPLOADED_IMAGE: 'md-cover-uploaded-image',
+    TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size',
+    TRACKLIST_LINE_PADDING: 'md-cover-tracklist-line-padding',
+    SPINE_FONT_SIZE: 'md-cover-spine-font-size'
 };
 
 function Editor(props) {
@@ -42,6 +46,8 @@ function Editor(props) {
     const [textColor, setTextColor] = createSignal('#000000');
     // Tracklist Font Size State
     const [tracklistFontSize, setTracklistFontSize] = createSignal(3.2);
+    const [tracklistLinePadding, setTracklistLinePadding] = createSignal(1.4);
+    const [spineFontSize, setSpineFontSize] = createSignal(0); // 0 = Auto
 
     // Image Selection State
     const [imageSelected, setImageSelected] = createSignal(false);
@@ -81,6 +87,8 @@ function Editor(props) {
             setBackgroundColor('#ffffff');
             setTextColor('#000000');
             setTracklistFontSize(3.2);
+            setTracklistLinePadding(1.4);
+            setSpineFontSize(0);
             setImgState({ x: 0, y: 0, scale: 1.0 });
             imgObj = null;
             draw();
@@ -140,6 +148,8 @@ function Editor(props) {
             const savedTextColor = localStorage.getItem(STORAGE_KEYS.TEXT_COLOR);
             const savedImageState = localStorage.getItem(STORAGE_KEYS.IMAGE_STATE);
             const savedFontSize = localStorage.getItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE);
+            const savedLinePadding = localStorage.getItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING);
+            const savedSpineFontSize = localStorage.getItem(STORAGE_KEYS.SPINE_FONT_SIZE);
             const savedImage = localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
 
             if (savedArtist) setManualArtist(savedArtist);
@@ -148,6 +158,8 @@ function Editor(props) {
             if (savedBgColor) setBackgroundColor(savedBgColor);
             if (savedTextColor) setTextColor(savedTextColor);
             if (savedFontSize) setTracklistFontSize(parseFloat(savedFontSize));
+            if (savedLinePadding) setTracklistLinePadding(parseFloat(savedLinePadding));
+            if (savedSpineFontSize) setSpineFontSize(parseFloat(savedSpineFontSize));
             if (savedImageState) setImgState(JSON.parse(savedImageState));
 
             // Load uploaded image from base64
@@ -190,6 +202,14 @@ function Editor(props) {
     });
 
     createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING, tracklistLinePadding());
+    });
+
+    createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.SPINE_FONT_SIZE, spineFontSize());
+    });
+
+    createEffect(() => {
         localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
     });
 
@@ -197,6 +217,13 @@ function Editor(props) {
         dimensions();
         zoom();
         imgState();
+        tracklistFontSize();
+        tracklistLinePadding();
+        spineFontSize();
+        manualArtist();
+        manualTitle();
+        backgroundColor();
+        textColor();
         draw();
     });
 
@@ -374,7 +401,7 @@ function Editor(props) {
         ctx.rotate(Math.PI / 2);
         ctx.fillStyle = textColor();
         ctx.textBaseline = 'middle';
-        const fontSize = dimensions().spineWidth * 0.85;
+        const fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
         ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
         // Artist on left (top when rotated)
@@ -421,7 +448,7 @@ function Editor(props) {
 
             ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
             ctx.textAlign = 'center';
-            const lineHeight = tracklistFontSize() * 1.4;
+            const lineHeight = tracklistFontSize() * tracklistLinePadding();
             const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
 
             // Helper to wrap text
@@ -522,7 +549,8 @@ function Editor(props) {
         ctx.rotate(Math.PI / 2);
         ctx.fillStyle = textColor();
         ctx.textBaseline = 'middle';
-        const fontSize = dimensions().spineWidth * 0.85;
+        const fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
+        // Map px to pt for PDF if needed, but here we are drawing to canvas first, so 1:1 mm mapping is maintained by scale.
         ctx.font = `${fontSize}px 'Anton', sans-serif`;
 
         // Artist on left (top when rotated)
@@ -560,9 +588,9 @@ function Editor(props) {
             // ctx.textAlign = 'center';
             // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
 
-            ctx.font = '3.2px \'Actor\', sans-serif';
+            ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
             ctx.textAlign = 'center';
-            const lineHeight = 4.5;
+            const lineHeight = tracklistFontSize() * tracklistLinePadding();
             const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
 
             // Helper to wrap text
@@ -778,6 +806,33 @@ function Editor(props) {
                             max="10"
                             value={tracklistFontSize()}
                             onInput={(e) => setTracklistFontSize(Number(e.target.value))}
+                            style={{ width: '50px', padding: '0.25rem' }}
+                        />
+                    </label>
+
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
+                        Line Padding:
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="1"
+                            max="3"
+                            value={tracklistLinePadding()}
+                            onInput={(e) => setTracklistLinePadding(Number(e.target.value))}
+                            style={{ width: '50px', padding: '0.25rem' }}
+                        />
+                    </label>
+
+                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
+                        Spine Font:
+                        <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            max="20"
+                            placeholder="Auto"
+                            value={spineFontSize() === 0 ? '' : spineFontSize()}
+                            onInput={(e) => setSpineFontSize(Number(e.target.value))}
                             style={{ width: '50px', padding: '0.25rem' }}
                         />
                     </label>

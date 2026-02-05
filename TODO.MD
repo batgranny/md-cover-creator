@@ -27,6 +27,8 @@
 27. ~~the tracklist should be vertically centered in the inside panel~~ ✅
 28. ~~add the ability to set the font size for the tracklist~~ ✅
 29. ~~add optional artist filter to search~~ ✅
+30. ~~add option to set line padding in tracklisting~~ ✅
+31. ~~add option to set spine font size~~ ✅
 
 
 
