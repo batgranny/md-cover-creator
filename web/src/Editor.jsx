@@ -546,6 +546,9 @@ function Editor(props) {
             ctx.restore();
         }
 
+        // Helper to sanitize filenames
+        const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
+
         // Use manual input or MusicBrainz data
         const artistName = getArtistName();
         const albumTitle = getAlbumTitle();
