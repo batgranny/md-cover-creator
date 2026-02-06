@@ -29,8 +29,8 @@
 29. ~~add optional artist filter to search~~ ✅
 30. ~~add option to set line padding in tracklisting~~ ✅
 31. ~~add option to set spine font size~~ ✅
-
-
-
-
-
+32. ~~Make tracklist editable (textarea input)~~ ✅
+33. ~~Add "Start from Scratch" functionality (manual mode)~~ ✅
+34. ~~Rename Title to "MiniDisc J-Card Creator"~~ ✅
+35. ~~Add Footer with GitHub Link~~ ✅
+36. ~~Fix PDF Download (browser compatibility issues)~~ ✅
