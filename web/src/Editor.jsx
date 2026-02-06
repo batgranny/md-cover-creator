@@ -673,9 +673,9 @@ function Editor(props) {
         const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
         console.log("Saving PDF with explicit Blob and file-saver:", filename);
 
-        // Explicitly construct Blob with correct MIME type to force browser compliance
+        // Explicitly construct Blob with octet-stream MIME type to force download and respect filename
         const pdfArrayBuffer = doc.output('arraybuffer');
-        const blob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+        const blob = new Blob([pdfArrayBuffer], { type: 'application/octet-stream' });
         saveAs(blob, filename);
     };
 
