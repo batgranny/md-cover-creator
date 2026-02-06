@@ -22,9 +22,6 @@ const STORAGE_KEYS = {
     DIMENSIONS: 'md-cover-dimensions',
     BG_COLOR: 'md-cover-bg-color',
     TEXT_COLOR: 'md-cover-text-color',
-    TEXT_COLOR: 'md-cover-text-color',
-    UPLOADED_IMAGE: 'md-cover-uploaded-image',
-    TEXT_COLOR: 'md-cover-text-color',
     UPLOADED_IMAGE: 'md-cover-uploaded-image',
     TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size',
     TRACKLIST_LINE_PADDING: 'md-cover-tracklist-line-padding',
@@ -69,32 +66,26 @@ function Editor(props) {
 
     // Helper functions to get artist/title with manual override
     const getArtistName = () => {
-        return manualArtist() || props.release?.['artist-credit']?.[0]?.name || 'Artist Name';
+        // Prioritize manual input, then release prop, then fallback
+        if (manualArtist()) return manualArtist();
+        if (props.release?.['artist-credit']?.[0]?.name) return props.release['artist-credit'][0].name;
+        return 'Artist Name';
     };
 
     const getAlbumTitle = () => {
-        return manualTitle() || props.release?.title || 'Album Title';
+        if (manualTitle()) return manualTitle();
+        if (props.release?.title) return props.release.title;
+        return 'Album Title';
     };
 
     // Clear local storage and reset to defaults
     const clearLocalStorage = () => {
-        if (confirm('Clear all saved progress? This cannot be undone.')) {
+        if (confirm('Clear all saved progress? This will reload the page.')) {
             Object.values(STORAGE_KEYS).forEach(key => {
                 localStorage.removeItem(key);
             });
-            setManualArtist('');
-            setManualTitle('');
-            setDimensions({ ...DEFAULTS });
-            setBackgroundColor('#ffffff');
-            setDimensions({ ...DEFAULTS });
-            setBackgroundColor('#ffffff');
-            setTextColor('#000000');
-            setTracklistFontSize(3.2);
-            setTracklistLinePadding(1.4);
-            setSpineFontSize(0);
-            setImgState({ x: 0, y: 0, scale: 1.0 });
-            imgObj = null;
-            draw();
+            // Force reload to ensure a completely clean state without lingering effects
+            window.location.reload();
         }
     };
 
@@ -643,16 +634,6 @@ function Editor(props) {
         const imgData = printCanvas.toDataURL('image/jpeg', 1.0);
         doc.addImage(imgData, 'JPEG', x - b, y - b, totalW + b * 2, totalH + b * 2);
 
-        // Removed: Red border rectangle
-        // doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.1); doc.rect(x, y, totalW, totalH);
-
-        // Removed: Dashed blue fold lines
-        // doc.setDrawColor(0, 100, 200); doc.setLineDashPattern([1, 1], 0);
-        // let fx = x + dimensions().backWidth; doc.line(fx, y, fx, y + totalH);
-        // fx += dimensions().spineWidth; doc.line(fx, y, fx, y + totalH);
-        // fx += dimensions().frontWidth; doc.line(fx, y, fx, y + totalH);
-        // doc.setLineDashPattern([], 0);
-
         doc.setDrawColor(0); doc.setLineWidth(0.1);
         const cl = 5; const co = b + 2;
         doc.line(x, y - co, x, y - co - cl); doc.line(x - co, y, x - co - cl, y);
@@ -685,11 +666,15 @@ function Editor(props) {
 
         const artist = getArtistName();
         const album = getAlbumTitle();
-        const filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
-        console.log("Saving PDF with FileSaver:", filename);
+        // Fallback if safeName returns empty string or just underscores
+        const finalArtist = safeName(artist) || 'Artist';
+        const finalAlbum = safeName(album) || 'Album';
 
-        const pdfBlob = doc.output('blob');
-        saveAs(pdfBlob, filename);
+        const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
+        console.log("Saving PDF with doc.save():", filename);
+
+        // Reverting to doc.save() as file-saver might be causing "random string" naming issues on some browsers
+        doc.save(filename);
     };
 
     return (
