@@ -670,19 +670,10 @@ function Editor(props) {
         const finalArtist = safeName(artistName) || 'Artist';
         const finalAlbum = safeName(albumTitle) || 'Album';
 
-        const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
-        console.log("Saving PDF with explicit blob download:", filename);
-
-        // Explicit Blob download to bypass potential jsPDF.save() shim issues
-        const blob = doc.output('blob');
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // Explicitly construct Blob with correct MIME type to force browser compliance
+        const pdfArrayBuffer = doc.output('arraybuffer');
+        const blob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+        saveAs(blob, filename);
     };
 
     return (
