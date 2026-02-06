@@ -34,3 +34,7 @@
 34. ~~Rename Title to "MiniDisc J-Card Creator"~~ ✅
 35. ~~Add Footer with GitHub Link~~ ✅
 36. ~~Fix PDF Download (browser compatibility issues)~~ ✅
+37. BUG: The download button is exhibiting the same behaviour as previously reported in issue #22.  The file name is incorrect (just a string of random characters) with no file type extension. Also, I cannot click the file name to open the file, or the file icon to view the file in the downloaded location
+38. BUG: the reset button is exhibiting strange behaviour: It does not clear the canvas and the dialogue box is flickering before disappearing. 
+39. BUG: When selecting the musicbrainz result the album title and artist in the spine and tab are showing 'test artist'
+
