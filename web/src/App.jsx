@@ -59,7 +59,7 @@ function App() {
       >
         {theme() === 'dark' ? '☀️' : '🌙'}
       </button>
-      <h1>MiniDisc Cover Creator</h1>
+      <h1 style={{ 'margin-bottom': '0.5rem' }}>MiniDisc J-Card Creator</h1>
 
       <div class="layout">
         <aside class="glass-card sidebar">
@@ -69,7 +69,7 @@ function App() {
               type="text"
               placeholder="Album..."
               value={query()}
-              value={query()}
+
               onInput={(e) => setQuery(e.target.value)}
               style={{ width: '100%', 'box-sizing': 'border-box' }}
             />
@@ -77,7 +77,7 @@ function App() {
               type="text"
               placeholder="Artist (Optional)..."
               value={artistQuery()}
-              value={artistQuery()}
+
               onInput={(e) => setArtistQuery(e.target.value)}
               style={{ width: '100%', 'box-sizing': 'border-box' }}
             />
@@ -114,10 +114,24 @@ function App() {
           {selectedRelease() ? (
             <Editor release={selectedRelease()} />
           ) : (
-            <p style={{ color: 'var(--text-secondary)' }}>Select an album to start designing</p>
+            <div style={{ 'text-align': 'center', 'margin-top': '4rem' }}>
+              <p style={{ 'font-size': '1.2rem', 'margin-bottom': '1rem', color: 'var(--text-secondary)' }}>Search for an album to start designing<br />or</p>
+              <button
+                onClick={() => setSelectedRelease({ id: 'manual', title: '', 'artist-credit': [], media: [] })}
+                class="accent-btn"
+                style={{ 'padding': '0.75rem 1.5rem', 'font-size': '1.1rem' }}
+              >
+                Start from Scratch
+              </button>
+            </div>
           )}
         </main>
       </div>
+      <footer style={{ 'text-align': 'center', 'margin-top': '2rem', padding: '1rem', color: 'var(--text-secondary)', 'font-size': '0.9rem' }}>
+        <p>
+          View on <a href="https://github.com/batgranny/md-cover-creator" target="_blank" style={{ color: 'var(--accent-color)' }}>GitHub</a>
+        </p>
+      </footer>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { createSignal, createEffect, onMount } from 'solid-js';
 import { jsPDF } from 'jspdf';
+import { saveAs } from 'file-saver';
 
 // J-card dimensions from user template (mm)
 const DEFAULTS = {
@@ -27,7 +28,8 @@ const STORAGE_KEYS = {
     UPLOADED_IMAGE: 'md-cover-uploaded-image',
     TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size',
     TRACKLIST_LINE_PADDING: 'md-cover-tracklist-line-padding',
-    SPINE_FONT_SIZE: 'md-cover-spine-font-size'
+    SPINE_FONT_SIZE: 'md-cover-spine-font-size',
+    TRACKLIST_TEXT: 'md-cover-tracklist-text'
 };
 
 function Editor(props) {
@@ -48,6 +50,7 @@ function Editor(props) {
     const [tracklistFontSize, setTracklistFontSize] = createSignal(3.2);
     const [tracklistLinePadding, setTracklistLinePadding] = createSignal(1.4);
     const [spineFontSize, setSpineFontSize] = createSignal(0); // 0 = Auto
+    const [tracklistText, setTracklistText] = createSignal('');
 
     // Image Selection State
     const [imageSelected, setImageSelected] = createSignal(false);
@@ -118,6 +121,18 @@ function Editor(props) {
         reader.readAsDataURL(file);
     };
 
+    // Initialize tracklistText from props when release changes
+    createEffect(() => {
+        const r = props.release;
+        if (r && r.media && r.media[0] && r.media[0].tracks) {
+            const text = r.media[0].tracks.map((t, i) => `${i + 1}. ${t.title}`).join('\n');
+            setTracklistText(text);
+        } else if (r?.id === 'manual' && tracklistText() === '') {
+            // If it's a "Start from Scratch" release and tracklist is empty, clear it.
+            setTracklistText('');
+        }
+    });
+
     // Load image when release changes
     createEffect(() => {
         if (props.release) {
@@ -150,6 +165,7 @@ function Editor(props) {
             const savedFontSize = localStorage.getItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE);
             const savedLinePadding = localStorage.getItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING);
             const savedSpineFontSize = localStorage.getItem(STORAGE_KEYS.SPINE_FONT_SIZE);
+            const savedTracklistText = localStorage.getItem(STORAGE_KEYS.TRACKLIST_TEXT);
             const savedImage = localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
 
             if (savedArtist) setManualArtist(savedArtist);
@@ -160,6 +176,9 @@ function Editor(props) {
             if (savedFontSize) setTracklistFontSize(parseFloat(savedFontSize));
             if (savedLinePadding) setTracklistLinePadding(parseFloat(savedLinePadding));
             if (savedSpineFontSize) setSpineFontSize(parseFloat(savedSpineFontSize));
+            // Only restore text if we are in "manual" mode (Start from Scratch) to avoid overriding a fresh MB search?
+            // actually if we have a saved text we probably want it?
+            if (savedTracklistText) setTracklistText(savedTracklistText);
             if (savedImageState) setImgState(JSON.parse(savedImageState));
 
             // Load uploaded image from base64
@@ -210,6 +229,10 @@ function Editor(props) {
     });
 
     createEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
+    });
+
+    createEffect(() => {
         localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
     });
 
@@ -222,6 +245,7 @@ function Editor(props) {
         spineFontSize();
         manualArtist();
         manualTitle();
+        tracklistText();
         backgroundColor();
         textColor();
         draw();
@@ -434,22 +458,17 @@ function Editor(props) {
         ctx.fillText(artistName.toUpperCase(), 0, 0);
         ctx.restore();
 
-        if (props.release?.media?.[0]?.tracks?.length > 0) {
-            const tracks = props.release.media[0].tracks;
+        if (tracklistText()) {
+            const tracks = tracklistText().split('\n');
             ctx.save();
             const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            // Title removed by request
-            // ctx.font = '8px \'Anton\', sans-serif';
-            // ctx.textAlign = 'center';
-            // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
-
             ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
             ctx.textAlign = 'center';
             const lineHeight = tracklistFontSize() * tracklistLinePadding();
-            const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
+            const maxWidth = dimensions().insideWidth - 4;
 
             // Helper to wrap text
             const wrapText = (text) => {
@@ -458,44 +477,38 @@ function Editor(props) {
                 let currentLine = words[0];
 
                 for (let i = 1; i < words.length; i++) {
-                    const width = ctx.measureText(currentLine + " " + words[i]).width;
+                    const word = words[i];
+                    const width = ctx.measureText(currentLine + " " + word).width;
                     if (width < maxWidth) {
-                        currentLine += " " + words[i];
+                        currentLine += " " + word;
                     } else {
                         lines.push(currentLine);
-                        currentLine = words[i];
+                        currentLine = word;
                     }
                 }
                 lines.push(currentLine);
                 return lines;
             };
 
-            // Calculate all lines first
             let allLines = [];
-            tracks.forEach((track, i) => {
-                const fullText = `${i + 1}. ${track.title}`;
-                const lines = wrapText(fullText);
-                allLines.push(...lines);
+            tracks.forEach((trackTitle) => {
+                const lines = wrapText(trackTitle);
+                allLines = allLines.concat(lines);
             });
 
-            // Calculate Start Y for vertical centering
             const totalTextHeight = allLines.length * lineHeight;
-            // Center in total height (about 35mm), ensure fallback padding
-            let startY = (dimensions().frontHeight - totalTextHeight) / 2;
-            if (startY < 5) startY = 5; // Minimum top padding
+            const startY = (dimensions().frontHeight - totalTextHeight) / 2 + (lineHeight / 2);
 
-            // Draw Lines
-            let currentY = startY;
-            allLines.forEach(line => {
-                ctx.fillText(line, dimensions().insideWidth / 2, currentY);
-                currentY += lineHeight;
+            allLines.forEach((line, i) => {
+                ctx.fillText(line, dimensions().insideWidth / 2, startY + (i * lineHeight));
             });
+
             ctx.restore();
         } else {
             ctx.fillStyle = '#999';
             ctx.font = '3px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText("Inside Panel", dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth + dimensions().insideWidth / 2, totalH / 2);
+            ctx.fillText("Inside Panel", dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth + dimensions().insideWidth / 2, dimensions().frontHeight / 2);
         }
     };
 
@@ -515,7 +528,8 @@ function Editor(props) {
         const y = (a4h - totalH) / 2;
 
         const printCanvas = document.createElement('canvas');
-        const scale = 4;
+        const scale = 2.5; // Reduced from 4 to prevent large canvas memory issues
+        // 3.7795 px/mm * 2.5 ~= 9.5 px/mm ~= 240 DPI. Sufficient for print.
         printCanvas.width = (totalW + b * 2) * 3.7795 * scale;
         printCanvas.height = (totalH + b * 2) * 3.7795 * scale;
         const ctx = printCanvas.getContext('2d');
@@ -576,22 +590,17 @@ function Editor(props) {
         ctx.fillText(artistName.toUpperCase(), 0, 0);
         ctx.restore();
 
-        if (props.release?.media?.[0]?.tracks?.length > 0) {
-            const tracks = props.release.media[0].tracks;
+        if (tracklistText()) {
+            const tracks = tracklistText().split('\n');
             ctx.save();
             const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
             ctx.translate(panelX, 0);
 
             ctx.fillStyle = textColor();
-            // Title removed by request
-            // ctx.font = '8px \'Anton\', sans-serif';
-            // ctx.textAlign = 'center';
-            // ctx.fillText(albumTitle, dimensions().insideWidth / 2, 10);
-
             ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
             ctx.textAlign = 'center';
             const lineHeight = tracklistFontSize() * tracklistLinePadding();
-            const maxWidth = dimensions().insideWidth - 4; // 2mm padding each side
+            const maxWidth = dimensions().insideWidth - 4;
 
             // Helper to wrap text
             const wrapText = (text) => {
@@ -600,6 +609,7 @@ function Editor(props) {
                 let currentLine = words[0];
 
                 for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
                     const width = ctx.measureText(currentLine + " " + words[i]).width;
                     if (width < maxWidth) {
                         currentLine += " " + words[i];
@@ -612,21 +622,16 @@ function Editor(props) {
                 return lines;
             };
 
-            // Calculate all lines first
             let allLines = [];
-            tracks.forEach((track, i) => {
-                const fullText = `${i + 1}. ${track.title}`;
-                const lines = wrapText(fullText);
-                allLines.push(...lines);
+            tracks.forEach((trackTitle) => {
+                const lines = wrapText(trackTitle);
+                allLines = allLines.concat(lines);
             });
 
-            // Calculate Start Y for vertical centering
             const totalTextHeight = allLines.length * lineHeight;
-            // Center in total height (frontHeight is ~35mm)
             let startY = (dimensions().frontHeight - totalTextHeight) / 2;
-            if (startY < 5) startY = 5; // Minimum top padding
+            if (startY < 5) startY = 5;
 
-            // Draw Lines
             let currentY = startY;
             allLines.forEach(line => {
                 ctx.fillText(line, dimensions().insideWidth / 2, currentY);
@@ -677,24 +682,14 @@ function Editor(props) {
 
         // Save Logic
         const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
-        let filename = 'minidisc-cover-jcard.pdf';
-        if (props.release) {
-            const artist = props.release['artist-credit']?.[0]?.name || 'unknown';
-            const album = props.release.title || 'untitled';
-            filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
-        }
 
-        // Manual download implementation - ensures browser respects filename
+        const artist = getArtistName();
+        const album = getAlbumTitle();
+        const filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
+        console.log("Saving PDF with FileSaver:", filename);
+
         const pdfBlob = doc.output('blob');
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        saveAs(pdfBlob, filename);
     };
 
     return (
@@ -722,6 +717,17 @@ function Editor(props) {
                             onInput={(e) => setManualTitle(e.target.value)}
                             style={{ width: '100%', 'box-sizing': 'border-box' }}
                         />
+                    </div>
+
+                    <div style={{ 'grid-column': '1 / -1' }}>
+                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Tracklist:</label>
+                        <textarea
+                            value={tracklistText()}
+                            onInput={(e) => setTracklistText(e.target.value)}
+                            placeholder="1. Track One... (one per line)"
+                            style={{ width: '100%', 'box-sizing': 'border-box', 'min-height': '150px', 'font-family': 'monospace', padding: '0.5rem' }}
+                        ></textarea>
+                        <small style={{ color: 'var(--text-secondary)' }}>Edit tracks here. One track per line.</small>
                     </div>
 
                     <div>
