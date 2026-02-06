@@ -22,9 +22,6 @@ const STORAGE_KEYS = {
     DIMENSIONS: 'md-cover-dimensions',
     BG_COLOR: 'md-cover-bg-color',
     TEXT_COLOR: 'md-cover-text-color',
-    TEXT_COLOR: 'md-cover-text-color',
-    UPLOADED_IMAGE: 'md-cover-uploaded-image',
-    TEXT_COLOR: 'md-cover-text-color',
     UPLOADED_IMAGE: 'md-cover-uploaded-image',
     TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size',
     TRACKLIST_LINE_PADDING: 'md-cover-tracklist-line-padding',
@@ -61,6 +58,9 @@ function Editor(props) {
     let canvasRef;
     let imgObj = null;
 
+    // Flag to prevent race conditions during reset
+    let isResetting = false;
+
     // Interaction State
     let isDragging = false;
     let activeHandle = null;
@@ -69,32 +69,27 @@ function Editor(props) {
 
     // Helper functions to get artist/title with manual override
     const getArtistName = () => {
-        return manualArtist() || props.release?.['artist-credit']?.[0]?.name || 'Artist Name';
+        // Prioritize manual input, then release prop, then fallback
+        if (manualArtist()) return manualArtist();
+        if (props.release?.['artist-credit']?.[0]?.name) return props.release['artist-credit'][0].name;
+        return 'Artist Name';
     };
 
     const getAlbumTitle = () => {
-        return manualTitle() || props.release?.title || 'Album Title';
+        if (manualTitle()) return manualTitle();
+        if (props.release?.title) return props.release.title;
+        return 'Album Title';
     };
 
     // Clear local storage and reset to defaults
     const clearLocalStorage = () => {
-        if (confirm('Clear all saved progress? This cannot be undone.')) {
+        if (window.confirm('Clear all saved progress? This will reload the page.')) {
+            isResetting = true; // Stop effects from saving
             Object.values(STORAGE_KEYS).forEach(key => {
                 localStorage.removeItem(key);
             });
-            setManualArtist('');
-            setManualTitle('');
-            setDimensions({ ...DEFAULTS });
-            setBackgroundColor('#ffffff');
-            setDimensions({ ...DEFAULTS });
-            setBackgroundColor('#ffffff');
-            setTextColor('#000000');
-            setTracklistFontSize(3.2);
-            setTracklistLinePadding(1.4);
-            setSpineFontSize(0);
-            setImgState({ x: 0, y: 0, scale: 1.0 });
-            imgObj = null;
-            draw();
+            // Force reload to ensure a completely clean state without lingering effects
+            window.location.reload();
         }
     };
 
@@ -112,7 +107,7 @@ function Editor(props) {
                 setImgState({ x: 0, y: 0, scale: 1.0 });
 
                 // Save to localStorage
-                localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, event.target.result);
+                if (!isResetting) localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, event.target.result);
 
                 draw();
             };
@@ -197,43 +192,43 @@ function Editor(props) {
 
     // Auto-save to localStorage on changes
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.MANUAL_ARTIST, manualArtist());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.MANUAL_ARTIST, manualArtist());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitle());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitle());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.DIMENSIONS, JSON.stringify(dimensions()));
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.DIMENSIONS, JSON.stringify(dimensions()));
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.BG_COLOR, backgroundColor());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.BG_COLOR, backgroundColor());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE, tracklistFontSize());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE, tracklistFontSize());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING, tracklistLinePadding());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING, tracklistLinePadding());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.SPINE_FONT_SIZE, spineFontSize());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.SPINE_FONT_SIZE, spineFontSize());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
     });
 
     createEffect(() => {
@@ -551,6 +546,9 @@ function Editor(props) {
             ctx.restore();
         }
 
+        // Helper to sanitize filenames
+        const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
+
         // Use manual input or MusicBrainz data
         const artistName = getArtistName();
         const albumTitle = getAlbumTitle();
@@ -643,16 +641,6 @@ function Editor(props) {
         const imgData = printCanvas.toDataURL('image/jpeg', 1.0);
         doc.addImage(imgData, 'JPEG', x - b, y - b, totalW + b * 2, totalH + b * 2);
 
-        // Removed: Red border rectangle
-        // doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.1); doc.rect(x, y, totalW, totalH);
-
-        // Removed: Dashed blue fold lines
-        // doc.setDrawColor(0, 100, 200); doc.setLineDashPattern([1, 1], 0);
-        // let fx = x + dimensions().backWidth; doc.line(fx, y, fx, y + totalH);
-        // fx += dimensions().spineWidth; doc.line(fx, y, fx, y + totalH);
-        // fx += dimensions().frontWidth; doc.line(fx, y, fx, y + totalH);
-        // doc.setLineDashPattern([], 0);
-
         doc.setDrawColor(0); doc.setLineWidth(0.1);
         const cl = 5; const co = b + 2;
         doc.line(x, y - co, x, y - co - cl); doc.line(x - co, y, x - co - cl, y);
@@ -678,181 +666,145 @@ function Editor(props) {
         // Front/Inside panel fold (between front and inside)
         const insideFoldX = x + dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
         doc.line(insideFoldX, y - co, insideFoldX, y - co - foldMarkLength);
-        doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
+        // Fallback if safeName returns empty string or just underscores
+        const finalArtist = safeName(artistName) || 'Artist';
+        const finalAlbum = safeName(albumTitle) || 'Album';
 
-        // Save Logic
-        const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
+        const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
+        console.log("Saving PDF with explicit Blob and file-saver:", filename);
 
-        const artist = getArtistName();
-        const album = getAlbumTitle();
-        const filename = `${safeName(artist)}-${safeName(album)}-jcard.pdf`;
-        console.log("Saving PDF with FileSaver:", filename);
-
-        const pdfBlob = doc.output('blob');
-        saveAs(pdfBlob, filename);
+        // Create a named File object (stronger hint for browsers than just a Blob)
+        const pdfArrayBuffer = doc.output('arraybuffer');
+        try {
+            const file = new File([pdfArrayBuffer], filename, { type: 'application/pdf' });
+            saveAs(file);
+        } catch (e) {
+            // Fallback for browsers that don't support File constructor fully
+            const blob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+            saveAs(blob, filename);
+        }
     };
 
     return (
         <div class="editor-container">
-            {/* Manual Input Controls */}
-            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
-                <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr 1fr', gap: '2rem', 'align-items': 'end' }}>
-                    <div>
-                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Artist Name (optional):</label>
-                        <input
-                            type="text"
-                            placeholder="Override MusicBrainz artist..."
-                            value={manualArtist()}
-                            onInput={(e) => setManualArtist(e.target.value)}
-                            style={{ width: '100%', 'box-sizing': 'border-box' }}
-                        />
+            <div
+                class="canvas-wrapper"
+                style={{ overflow: 'hidden', 'max-height': '600px', border: '1px solid #333', 'margin-bottom': '1rem' }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+            >
+                <canvas ref={canvasRef} />
+            </div>
+
+            {/* Main Controls Grid */}
+            <div style={{ display: 'grid', 'grid-template-columns': '2fr 1fr', gap: '1rem', 'margin-bottom': '1rem' }}>
+
+                {/* Left Column: Content Inputs */}
+                <div class="glass-card" style={{ padding: '1rem', display: 'flex', 'flex-direction': 'column', gap: '1rem', height: '100%', 'box-sizing': 'border-box' }}>
+                    <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Artist</label>
+                            <input
+                                type="text"
+                                placeholder="Artist Name..."
+                                value={manualArtist()}
+                                onInput={(e) => setManualArtist(e.target.value)}
+                                style={{ width: '100%', 'box-sizing': 'border-box' }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Title</label>
+                            <input
+                                type="text"
+                                placeholder="Album Title..."
+                                value={manualTitle()}
+                                onInput={(e) => setManualTitle(e.target.value)}
+                                style={{ width: '100%', 'box-sizing': 'border-box' }}
+                            />
+                        </div>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Album Title (optional):</label>
-                        <input
-                            type="text"
-                            placeholder="Override MusicBrainz title..."
-                            value={manualTitle()}
-                            onInput={(e) => setManualTitle(e.target.value)}
-                            style={{ width: '100%', 'box-sizing': 'border-box' }}
-                        />
-                    </div>
-
-                    <div style={{ 'grid-column': '1 / -1' }}>
-                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Tracklist:</label>
+                    <div style={{ display: 'flex', 'flex-direction': 'column', flex: 1 }}>
+                        <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Tracklist</label>
                         <textarea
                             value={tracklistText()}
                             onInput={(e) => setTracklistText(e.target.value)}
                             placeholder="1. Track One... (one per line)"
-                            style={{ width: '100%', 'box-sizing': 'border-box', 'min-height': '150px', 'font-family': 'monospace', padding: '0.5rem' }}
+                            style={{ width: '100%', 'box-sizing': 'border-box', 'font-family': 'monospace', padding: '0.5rem', resize: 'none', flex: 1 }}
                         ></textarea>
-                        <small style={{ color: 'var(--text-secondary)' }}>Edit tracks here. One track per line.</small>
                     </div>
+                </div>
 
-                    <div>
-                        <label style={{ display: 'block', 'margin-bottom': '0.25rem', 'font-size': '0.9em' }}>Upload Cover Image:</label>
+                {/* Right Column: Upload & Style Tools */}
+                <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1rem' }}>
+                    {/* Image Upload */}
+                    <div class="glass-card" style={{ padding: '1rem' }}>
+                        <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.5rem', color: 'var(--text-secondary)' }}>Cover Image</label>
                         <input
                             type="file"
                             accept="image/*"
                             onChange={handleImageUpload}
-                            style={{ width: '100%', height: '38px', padding: '0.5rem', 'box-sizing': 'border-box' }}
+                            style={{ width: '100%', 'max-width': '100%', 'box-sizing': 'border-box', 'font-size': '0.9em' }}
                         />
+                        <div style={{ 'margin-top': '0.5rem', 'font-size': '0.75em', color: 'var(--text-secondary)' }}>
+                            <small>Click image to resize/crop.</small>
+                        </div>
                     </div>
-                </div>
-                <div style={{ 'margin-top': '0.5rem', 'font-size': '0.85em', color: 'var(--text-secondary)' }}>
-                    <small>💡 Manual inputs override MusicBrainz data. Click image to select/deselect and show resize handles.</small>
-                </div>
-            </div>
 
-            {/* Color Pickers and Clear Progress */}
-            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'center', 'flex-wrap': 'wrap' }}>
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        Background:
-
-
-                        <div style={{ position: 'relative', width: '30px', height: '30px' }}>
-                            <div style={{
-                                position: 'absolute',
-                                left: 0, top: 0,
-                                width: '100%', height: '100%',
-                                background: backgroundColor(),
-                                border: '2px solid var(--text-secondary)',
-                                'border-radius': '4px',
-                                'pointer-events': 'none'
-                            }}></div>
-                            <input
-                                type="color"
-                                value={backgroundColor()}
-                                onInput={(e) => setBackgroundColor(e.target.value)}
-                                style={{
-                                    width: '100%', height: '100%',
-                                    opacity: 0, cursor: 'pointer',
-                                    padding: 0, border: 'none'
-                                }}
-                            />
+                    {/* Style Bar */}
+                    <div class="glass-card" style={{ padding: '1rem', display: 'flex', 'flex-direction': 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'space-between' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }} title="Background Color">
+                                <span style={{ 'font-size': '0.9em', 'font-weight': 'bold', color: 'var(--text-secondary)' }}>BG</span>
+                                <input
+                                    type="color"
+                                    value={backgroundColor()}
+                                    onInput={(e) => setBackgroundColor(e.target.value)}
+                                    style={{ width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer', background: 'none' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }} title="Text Color">
+                                <span style={{ 'font-size': '0.9em', 'font-weight': 'bold', color: 'var(--text-secondary)' }}>Text</span>
+                                <input
+                                    type="color"
+                                    value={textColor()}
+                                    onInput={(e) => setTextColor(e.target.value)}
+                                    style={{ width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer', background: 'none' }}
+                                />
+                            </div>
                         </div>
-                    </label>
-
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        Text:
-
-                        <div style={{ position: 'relative', width: '30px', height: '30px' }}>
-                            <div style={{
-                                position: 'absolute',
-                                left: 0, top: 0,
-                                width: '100%', height: '100%',
-                                background: textColor(),
-                                border: '2px solid var(--text-secondary)',
-                                'border-radius': '4px',
-                                'pointer-events': 'none'
-                            }}></div>
-                            <input
-                                type="color"
-                                value={textColor()}
-                                onInput={(e) => setTextColor(e.target.value)}
-                                style={{
-                                    width: '100%', height: '100%',
-                                    opacity: 0, cursor: 'pointer',
-                                    padding: 0, border: 'none'
-                                }}
-                            />
+                        <div style={{ height: '1px', background: 'var(--glass-border)' }}></div>
+                        <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '0.5rem' }}>
+                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Tracklist Font Size">
+                                <span>🔢</span>
+                                <input type="number" step="0.1" value={tracklistFontSize()} onInput={(e) => setTracklistFontSize(Number(e.target.value))} style={{ width: '100%' }} />
+                            </label>
+                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Line Spacing">
+                                <span>↕️</span>
+                                <input type="number" step="0.1" value={tracklistLinePadding()} onInput={(e) => setTracklistLinePadding(Number(e.target.value))} style={{ width: '100%' }} />
+                            </label>
+                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Spine Font Size">
+                                <span>📖</span>
+                                <input type="number" step="0.5" placeholder="Auto" value={spineFontSize() === 0 ? '' : spineFontSize()} onInput={(e) => setSpineFontSize(Number(e.target.value))} style={{ width: '100%' }} />
+                            </label>
                         </div>
-                    </label>
+                    </div>
 
-                    <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>
 
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        Size:
-                        <input
-                            type="number"
-                            step="0.1"
-                            min="1"
-                            max="10"
-                            value={tracklistFontSize()}
-                            onInput={(e) => setTracklistFontSize(Number(e.target.value))}
-                            style={{ width: '50px', padding: '0.25rem' }}
-                        />
-                    </label>
-
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        Line Padding:
-                        <input
-                            type="number"
-                            step="0.1"
-                            min="1"
-                            max="3"
-                            value={tracklistLinePadding()}
-                            onInput={(e) => setTracklistLinePadding(Number(e.target.value))}
-                            style={{ width: '50px', padding: '0.25rem' }}
-                        />
-                    </label>
-
-                    <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        Spine Font:
-                        <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            max="20"
-                            placeholder="Auto"
-                            value={spineFontSize() === 0 ? '' : spineFontSize()}
-                            onInput={(e) => setSpineFontSize(Number(e.target.value))}
-                            style={{ width: '50px', padding: '0.25rem' }}
-                        />
-                    </label>
-
-                    <div style={{ width: '1px', height: '30px', background: 'var(--text-secondary)', opacity: '0.3', margin: '0 0.5rem' }}></div>
-
-                    <button onClick={clearLocalStorage} style={{ padding: '0.5rem 1rem', background: '#e74c3c', color: 'white', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}>
-                        Clear Progress
-                    </button>
+                    {/* Actions */}
+                    <div style={{ 'text-align': 'right', display: 'flex', 'justify-content': 'space-between', gap: '1rem', 'align-items': 'center' }}>
+                        <button onClick={exportPDF} style={{ 'font-weight': 'bold', 'padding': '0.4rem 0.8rem', 'font-size': '0.9em' }}>Download PDF</button>
+                        <button onClick={clearLocalStorage} style={{ padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid #e74c3c', color: '#e74c3c', 'font-size': '0.9em', 'border-radius': '4px', cursor: 'pointer' }}>
+                            🗑️ Reset
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Collapsible Dimension Controls */}
-            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '1rem' }}>
+            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '0.5rem 1rem' }}>
                 <div
                     onClick={() => setDimensionsExpanded(!dimensionsExpanded())}
                     style={{ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'user-select': 'none' }}
@@ -872,20 +824,7 @@ function Editor(props) {
                 )}
             </div>
 
-            <div
-                class="canvas-wrapper"
-                style={{ overflow: 'hidden', 'max-height': '600px', border: '1px solid #333' }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-            >
-                <canvas ref={canvasRef} />
-            </div>
 
-            <div style={{ 'margin-top': '1rem' }}>
-                <button onClick={exportPDF} style={{ 'font-weight': 'bold' }}>Download PDF</button>
-            </div>
         </div>
     );
 }
