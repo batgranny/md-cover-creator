@@ -670,6 +670,9 @@ function Editor(props) {
         const finalArtist = safeName(artistName) || 'Artist';
         const finalAlbum = safeName(albumTitle) || 'Album';
 
+        const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
+        console.log("Saving PDF with explicit Blob and file-saver:", filename);
+
         // Explicitly construct Blob with correct MIME type to force browser compliance
         const pdfArrayBuffer = doc.output('arraybuffer');
         const blob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
