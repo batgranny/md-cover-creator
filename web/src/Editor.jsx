@@ -58,6 +58,9 @@ function Editor(props) {
     let canvasRef;
     let imgObj = null;
 
+    // Flag to prevent race conditions during reset
+    let isResetting = false;
+
     // Interaction State
     let isDragging = false;
     let activeHandle = null;
@@ -80,7 +83,8 @@ function Editor(props) {
 
     // Clear local storage and reset to defaults
     const clearLocalStorage = () => {
-        if (confirm('Clear all saved progress? This will reload the page.')) {
+        if (window.confirm('Clear all saved progress? This will reload the page.')) {
+            isResetting = true; // Stop effects from saving
             Object.values(STORAGE_KEYS).forEach(key => {
                 localStorage.removeItem(key);
             });
@@ -103,7 +107,7 @@ function Editor(props) {
                 setImgState({ x: 0, y: 0, scale: 1.0 });
 
                 // Save to localStorage
-                localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, event.target.result);
+                if (!isResetting) localStorage.setItem(STORAGE_KEYS.UPLOADED_IMAGE, event.target.result);
 
                 draw();
             };
@@ -188,43 +192,43 @@ function Editor(props) {
 
     // Auto-save to localStorage on changes
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.MANUAL_ARTIST, manualArtist());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.MANUAL_ARTIST, manualArtist());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitle());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitle());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.DIMENSIONS, JSON.stringify(dimensions()));
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.DIMENSIONS, JSON.stringify(dimensions()));
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.BG_COLOR, backgroundColor());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.BG_COLOR, backgroundColor());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TEXT_COLOR, textColor());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE, tracklistFontSize());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE, tracklistFontSize());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING, tracklistLinePadding());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING, tracklistLinePadding());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.SPINE_FONT_SIZE, spineFontSize());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.SPINE_FONT_SIZE, spineFontSize());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
     });
 
     createEffect(() => {
-        localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.IMAGE_STATE, JSON.stringify(imgState()));
     });
 
     createEffect(() => {
@@ -659,22 +663,23 @@ function Editor(props) {
         // Front/Inside panel fold (between front and inside)
         const insideFoldX = x + dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
         doc.line(insideFoldX, y - co, insideFoldX, y - co - foldMarkLength);
-        doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
-
-        // Save Logic
-        const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
-
-        const artist = getArtistName();
-        const album = getAlbumTitle();
         // Fallback if safeName returns empty string or just underscores
-        const finalArtist = safeName(artist) || 'Artist';
-        const finalAlbum = safeName(album) || 'Album';
+        const finalArtist = safeName(artistName) || 'Artist';
+        const finalAlbum = safeName(albumTitle) || 'Album';
 
         const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
-        console.log("Saving PDF with doc.save():", filename);
+        console.log("Saving PDF with explicit blob download:", filename);
 
-        // Reverting to doc.save() as file-saver might be causing "random string" naming issues on some browsers
-        doc.save(filename);
+        // Explicit Blob download to bypass potential jsPDF.save() shim issues
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     return (
