@@ -671,18 +671,10 @@ function Editor(props) {
         const finalAlbum = safeName(albumTitle) || 'Album';
 
         const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
-        console.log("Saving PDF with explicit blob download:", filename);
+        console.log("Saving PDF with doc.save():", filename);
 
-        // Explicit Blob download to bypass potential jsPDF.save() shim issues
-        const blob = doc.output('blob');
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // Usage of doc.save() is preferred over manual blob for compatibility in this case
+        doc.save(filename);
     };
 
     return (
