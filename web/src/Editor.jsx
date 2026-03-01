@@ -666,6 +666,8 @@ function Editor(props) {
         // Front/Inside panel fold (between front and inside)
         const insideFoldX = x + dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
         doc.line(insideFoldX, y - co, insideFoldX, y - co - foldMarkLength);
+        doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
+
         // Fallback if safeName returns empty string or just underscores
         const finalArtist = safeName(artistName) || 'Artist';
         const finalAlbum = safeName(albumTitle) || 'Album';
