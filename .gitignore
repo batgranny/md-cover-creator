@@ -1,0 +1,43 @@
+# System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Go
+# Binaries
+bin/
+dist/
+*.exe
+*.test
+*.prof
+
+# Vendor
+vendor/
+
+# Test coverage
+coverage.txt
+profile.out
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+crash.log
+
+# Node / Web (redundant but safe)
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
+.env.local
+
+# Docker
+docker-compose.override.yml
