@@ -162,23 +162,15 @@ input:focus {
   background: var(--glass-border);
 }
 
-/* Always show number input spin buttons and add padding */
+/* Hide native number input spin buttons completely since we will use custom UI */
 input[type="number"] {
-  appearance: auto;
-  -moz-appearance: auto;
-  padding-right: 15px !important;
-  /* Right edge padding for Safari */
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-  appearance: inner-spin-button !important;
-  -webkit-appearance: inner-spin-button !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: block !important;
-  cursor: pointer;
-  /* Safari requires block or default, not flex */
-  margin-left: 8px !important;
-  padding: 4px !important;
+  -webkit-appearance: none;
+  margin: 0;
+  display: none;
 }
