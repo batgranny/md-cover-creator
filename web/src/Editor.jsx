@@ -4,6 +4,7 @@ import { saveAs } from 'file-saver';
 import { renderCover, getTotalWidth, getTotalHeight, getImgGeo } from './utils/canvasRender';
 import { ControlsPanel } from './components/ControlsPanel';
 import { StylePanel } from './components/StylePanel';
+import { CustomNumberInput } from './components/CustomNumberInput';
 
 // J-card dimensions from user template (mm)
 const DEFAULTS = {
@@ -514,19 +515,29 @@ function Editor(props) {
                     setSpineFontSize={setSpineFontSize}
                     exportPDF={exportPDF}
                     clearLocalStorage={clearLocalStorage}
-                />    <strong>Dimensions (mm)</strong>
-                <span style={{ 'font-size': '1.2em' }}>{dimensionsExpanded() ? '▼' : '▶'}</span>
+                />
             </div>
 
-            {dimensionsExpanded() && (
-                <div style={{ 'margin-top': '1rem', display: 'flex', gap: '1rem', 'flex-wrap': 'wrap', 'justify-content': 'center' }}>
-                    <label>Rear: <input type="number" value={dimensions().backWidth} onInput={(e) => setDimensions({ ...dimensions(), backWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                    <label>Spine: <input type="number" value={dimensions().spineWidth} onInput={(e) => setDimensions({ ...dimensions(), spineWidth: Number(e.target.value) })} style={{ width: '40px' }} /></label>
-                    <label>Front: <input type="number" value={dimensions().frontWidth} onInput={(e) => setDimensions({ ...dimensions(), frontWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                    <label>Inside: <input type="number" value={dimensions().insideWidth} onInput={(e) => setDimensions({ ...dimensions(), insideWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                    <label>Height: <input type="number" value={dimensions().frontHeight} onInput={(e) => { const val = Number(e.target.value); setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val }) }} style={{ width: '50px' }} /></label>
+            {/* Collapsible Dimension Controls */}
+            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '0.5rem 1rem' }}>
+                <div
+                    onClick={() => setDimensionsExpanded(!dimensionsExpanded())}
+                    style={{ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'user-select': 'none' }}
+                >
+                    <strong>Dimensions (mm)</strong>
+                    <span style={{ 'font-size': '1.2em' }}>{dimensionsExpanded() ? '▼' : '▶'}</span>
                 </div>
-            )}
+
+                {dimensionsExpanded() && (
+                    <div style={{ 'margin-top': '1rem', display: 'flex', gap: '1rem', 'flex-wrap': 'wrap', 'justify-content': 'center' }}>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>Rear: <CustomNumberInput value={dimensions().backWidth} onInput={(val) => setDimensions({ ...dimensions(), backWidth: val })} style={{ width: '60px' }} /></label>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>Spine: <CustomNumberInput value={dimensions().spineWidth} onInput={(val) => setDimensions({ ...dimensions(), spineWidth: val })} style={{ width: '60px' }} /></label>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>Front: <CustomNumberInput value={dimensions().frontWidth} onInput={(val) => setDimensions({ ...dimensions(), frontWidth: val })} style={{ width: '60px' }} /></label>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>Inside: <CustomNumberInput value={dimensions().insideWidth} onInput={(val) => setDimensions({ ...dimensions(), insideWidth: val })} style={{ width: '60px' }} /></label>
+                        <label style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>Height: <CustomNumberInput value={dimensions().frontHeight} onInput={(val) => setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val })} style={{ width: '60px' }} /></label>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
