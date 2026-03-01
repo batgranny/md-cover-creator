@@ -1,6 +1,9 @@
 import { createSignal, createEffect, onMount } from 'solid-js';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
+import { renderCover, getTotalWidth, getTotalHeight, getImgGeo } from './utils/canvasRender';
+import { ControlsPanel } from './components/ControlsPanel';
+import { StylePanel } from './components/StylePanel';
 
 // J-card dimensions from user template (mm)
 const DEFAULTS = {
@@ -246,15 +249,7 @@ function Editor(props) {
         draw();
     });
 
-    const getTotalWidth = () => dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth + dimensions().insideWidth;
-    const getTotalHeight = () => dimensions().frontHeight;
-
-    const getImgGeo = () => {
-        if (!imgObj) return null;
-        const w = dimensions().frontWidth * imgState().scale;
-        const h = w * (imgObj.height / imgObj.width);
-        return { x: imgState().x, y: imgState().y, w, h };
-    };
+    // Note: Geometry functions have been moved to canvasRender.js
 
     const screenToMm = (sx, sy) => {
         if (!canvasRef) return { x: 0, y: 0 };
@@ -275,7 +270,7 @@ function Editor(props) {
 
     const handleMouseDown = (e) => {
         const mmPos = screenToMm(e.clientX, e.clientY);
-        const geo = getImgGeo();
+        const geo = getImgGeo(imgObj, imgState(), dimensions());
         if (!geo) return;
 
         // Reset activeHandle on every new click
@@ -358,169 +353,32 @@ function Editor(props) {
         if (!canvasRef) return;
         const ctx = canvasRef.getContext('2d');
         const scale = zoom() * 3.7795;
-        const totalW = getTotalWidth();
-        const totalH = getTotalHeight();
+        const totalW = getTotalWidth(dimensions());
+        const totalH = getTotalHeight(dimensions());
         const b = dimensions().bleed;
 
         canvasRef.width = (totalW + b * 2) * scale;
         canvasRef.height = (totalH + b * 2) * scale;
-        ctx.scale(scale, scale);
-        ctx.translate(b, b);
 
-        ctx.fillStyle = backgroundColor();
-        ctx.fillRect(-b, -b, totalW + b * 2, totalH + b * 2);
+        // Build config for live canvas overlay rendering
+        const config = {
+            dimensions: dimensions(),
+            scale: scale,
+            backgroundColor: backgroundColor(),
+            imgObj: imgObj,
+            imgState: imgState(),
+            imageSelected: imageSelected(),
+            textColor: textColor(),
+            artistName: getArtistName(),
+            albumTitle: getAlbumTitle(),
+            spineFontSize: spineFontSize(),
+            tracklistText: tracklistText(),
+            tracklistFontSize: tracklistFontSize(),
+            tracklistLinePadding: tracklistLinePadding(),
+            livePreview: true // Flag to draw cutting guides
+        };
 
-        if (imgObj) {
-            const imgAreaX = dimensions().backWidth + dimensions().spineWidth;
-            const geo = getImgGeo();
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(imgAreaX, -b, dimensions().frontWidth, dimensions().frontHeight + b * 2);
-            ctx.clip();
-            ctx.drawImage(imgObj, imgAreaX + geo.x, geo.y, geo.w, geo.h);
-            ctx.restore();
-
-            // Only show bounding box when image is selected
-            if (imageSelected()) {
-                ctx.save();
-                ctx.translate(imgAreaX, 0);
-                ctx.strokeStyle = '#00aaff';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(geo.x, geo.y, geo.w, geo.h);
-
-                const hw = 1.5;
-                ctx.fillStyle = '#ffffff';
-                const drawHandle = (hx, hy) => {
-                    ctx.fillRect(hx - hw, hy - hw, hw * 2, hw * 2);
-                    ctx.strokeRect(hx - hw, hy - hw, hw * 2, hw * 2);
-                };
-                drawHandle(geo.x, geo.y);
-                drawHandle(geo.x + geo.w, geo.y);
-                drawHandle(geo.x, geo.y + geo.h);
-                drawHandle(geo.x + geo.w, geo.y + geo.h);
-                ctx.restore();
-            }
-        }
-
-        ctx.lineWidth = 0.3;
-        ctx.strokeStyle = '#e91e63';
-        ctx.strokeRect(0, 0, totalW, totalH);
-
-        ctx.strokeStyle = '#2196f3';
-        ctx.setLineDash([1, 1]);
-        ctx.beginPath();
-        let x = dimensions().backWidth;
-        ctx.moveTo(x, 0); ctx.lineTo(x, totalH);
-        x += dimensions().spineWidth;
-        ctx.moveTo(x, 0); ctx.lineTo(x, totalH);
-        x += dimensions().frontWidth;
-        ctx.moveTo(x, 0); ctx.lineTo(x, totalH);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.strokeStyle = '#cccccc';
-        ctx.setLineDash([1, 1]);
-        ctx.strokeRect(-b, -b, totalW + b * 2, totalH + b * 2);
-        ctx.setLineDash([]);
-
-        // Use manual input or MusicBrainz data
-        const artistName = getArtistName();
-        const albumTitle = getAlbumTitle();
-
-        // Spine Text - Artist on left (top), Title on right (bottom)
-        ctx.save();
-        const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
-        const spineY = dimensions().spineHeight / 2;
-        ctx.translate(spineX, spineY);
-        ctx.rotate(Math.PI / 2);
-        ctx.fillStyle = textColor();
-        ctx.textBaseline = 'middle';
-        const fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
-        ctx.font = `${fontSize}px 'Anton', sans-serif`;
-
-        // Artist on left (top when rotated)
-        ctx.textAlign = 'left';
-        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0.5);
-
-        // Title on right (bottom when rotated)
-        ctx.textAlign = 'right';
-        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0.5);
-        ctx.restore();
-
-        // Rear Tab Text (Far Left)
-        // Artist name, Anton font, bottom to top
-        ctx.save();
-        // Center horizontally in the tab
-        const rearX = dimensions().backWidth / 1.6;
-        // Move Y to bottom edge minus padding
-        const rearY = dimensions().backHeight - 1;
-
-        ctx.translate(rearX, rearY);
-        ctx.rotate(-Math.PI / 2);
-
-        ctx.fillStyle = textColor();
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-
-        // Fit to tab width (backWidth default 11mm).
-        const antonSize = dimensions().backWidth * 0.9;
-        ctx.font = `${antonSize}px 'Anton', sans-serif`;
-        ctx.fillText(artistName.toUpperCase(), 0, 0);
-        ctx.restore();
-
-        if (tracklistText()) {
-            const tracks = tracklistText().split('\n');
-            ctx.save();
-            const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
-            ctx.translate(panelX, 0);
-
-            ctx.fillStyle = textColor();
-            ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
-            ctx.textAlign = 'center';
-            const lineHeight = tracklistFontSize() * tracklistLinePadding();
-            const maxWidth = dimensions().insideWidth - 4;
-
-            // Helper to wrap text
-            const wrapText = (text) => {
-                const words = text.split(' ');
-                let lines = [];
-                let currentLine = words[0];
-
-                for (let i = 1; i < words.length; i++) {
-                    const word = words[i];
-                    const width = ctx.measureText(currentLine + " " + word).width;
-                    if (width < maxWidth) {
-                        currentLine += " " + word;
-                    } else {
-                        lines.push(currentLine);
-                        currentLine = word;
-                    }
-                }
-                lines.push(currentLine);
-                return lines;
-            };
-
-            let allLines = [];
-            tracks.forEach((trackTitle) => {
-                const lines = wrapText(trackTitle);
-                allLines = allLines.concat(lines);
-            });
-
-            const totalTextHeight = allLines.length * lineHeight;
-            const startY = (dimensions().frontHeight - totalTextHeight) / 2 + (lineHeight / 2);
-
-            allLines.forEach((line, i) => {
-                ctx.fillText(line, dimensions().insideWidth / 2, startY + (i * lineHeight));
-            });
-
-            ctx.restore();
-        } else {
-            ctx.fillStyle = '#999';
-            ctx.font = '3px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText("Inside Panel", dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth + dimensions().insideWidth / 2, dimensions().frontHeight / 2);
-        }
+        renderCover(ctx, config);
     };
 
     const exportPDF = () => {
@@ -530,8 +388,8 @@ function Editor(props) {
             format: 'a4'
         });
 
-        const totalW = getTotalWidth();
-        const totalH = getTotalHeight();
+        const totalW = getTotalWidth(dimensions());
+        const totalH = getTotalHeight(dimensions());
         const b = dimensions().bleed;
         const a4w = 297;
         const a4h = 210;
@@ -544,115 +402,27 @@ function Editor(props) {
         printCanvas.width = (totalW + b * 2) * 3.7795 * scale;
         printCanvas.height = (totalH + b * 2) * 3.7795 * scale;
         const ctx = printCanvas.getContext('2d');
-        ctx.scale(3.7795 * scale, 3.7795 * scale);
-        ctx.translate(b, b);
 
-        ctx.fillStyle = backgroundColor();
-        ctx.fillRect(-b, -b, totalW + b * 2, totalH + b * 2);
+        // Build config for high-DPI PDF printing
+        const config = {
+            dimensions: dimensions(),
+            scale: 3.7795 * scale,
+            backgroundColor: backgroundColor(),
+            imgObj: imgObj,
+            imgState: imgState(),
+            imageSelected: false, // Never draw handles on PDF
+            textColor: textColor(),
+            artistName: getArtistName(),
+            albumTitle: getAlbumTitle(),
+            spineFontSize: spineFontSize(),
+            tracklistText: tracklistText(),
+            tracklistFontSize: tracklistFontSize(),
+            tracklistLinePadding: tracklistLinePadding(),
+            livePreview: false // Do not draw guides or placeholders
+        };
 
-        if (imgObj) {
-            const imgAreaX = dimensions().backWidth + dimensions().spineWidth;
-            const geo = getImgGeo();
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(imgAreaX, -b, dimensions().frontWidth, dimensions().frontHeight + b * 2);
-            ctx.clip();
-            ctx.drawImage(imgObj, imgAreaX + geo.x, geo.y, geo.w, geo.h);
-            ctx.restore();
-        }
-
-        // Helper to sanitize filenames
-        const safeName = (str) => (str || 'unknown').replace(/[^a-z0-9\-\s]/gi, '').trim().replace(/\s+/g, '_');
-
-        // Use manual input or MusicBrainz data
-        const artistName = getArtistName();
-        const albumTitle = getAlbumTitle();
-
-        // Spine Text - Artist on left (top), Title on right (bottom)
-        ctx.save();
-        const spineX = dimensions().backWidth + dimensions().spineWidth / 2;
-        const spineY = dimensions().spineHeight / 2;
-        ctx.translate(spineX, spineY);
-        ctx.rotate(Math.PI / 2);
-        ctx.fillStyle = textColor();
-        ctx.textBaseline = 'middle';
-        const fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
-        // Map px to pt for PDF if needed, but here we are drawing to canvas first, so 1:1 mm mapping is maintained by scale.
-        ctx.font = `${fontSize}px 'Anton', sans-serif`;
-
-        // Artist on left (top when rotated)
-        ctx.textAlign = 'left';
-        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0.5);
-
-        // Title on right (bottom when rotated)
-        ctx.textAlign = 'right';
-        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0.5);
-        ctx.restore();
-
-        // Rear Tab Text (Far Left)
-        ctx.save();
-        const rearX = dimensions().backWidth / 1.6;
-        const rearY = dimensions().backHeight - 1;
-        ctx.translate(rearX, rearY);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillStyle = textColor();
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        const antonSize = dimensions().backWidth * 0.9;
-        ctx.font = `${antonSize}px 'Anton', sans-serif`;
-        ctx.fillText(artistName.toUpperCase(), 0, 0);
-        ctx.restore();
-
-        if (tracklistText()) {
-            const tracks = tracklistText().split('\n');
-            ctx.save();
-            const panelX = dimensions().backWidth + dimensions().spineWidth + dimensions().frontWidth;
-            ctx.translate(panelX, 0);
-
-            ctx.fillStyle = textColor();
-            ctx.font = `${tracklistFontSize()}px 'Actor', sans-serif`;
-            ctx.textAlign = 'center';
-            const lineHeight = tracklistFontSize() * tracklistLinePadding();
-            const maxWidth = dimensions().insideWidth - 4;
-
-            // Helper to wrap text
-            const wrapText = (text) => {
-                const words = text.split(' ');
-                let lines = [];
-                let currentLine = words[0];
-
-                for (let i = 1; i < words.length; i++) {
-                    const word = words[i];
-                    const width = ctx.measureText(currentLine + " " + words[i]).width;
-                    if (width < maxWidth) {
-                        currentLine += " " + words[i];
-                    } else {
-                        lines.push(currentLine);
-                        currentLine = words[i];
-                    }
-                }
-                lines.push(currentLine);
-                return lines;
-            };
-
-            let allLines = [];
-            tracks.forEach((trackTitle) => {
-                const lines = wrapText(trackTitle);
-                allLines = allLines.concat(lines);
-            });
-
-            const totalTextHeight = allLines.length * lineHeight;
-            let startY = (dimensions().frontHeight - totalTextHeight) / 2;
-            if (startY < 5) startY = 5;
-
-            let currentY = startY;
-            allLines.forEach(line => {
-                ctx.fillText(line, dimensions().insideWidth / 2, currentY);
-                currentY += lineHeight;
-            });
-            ctx.restore();
-        }
+        // Leverage the universal render mapping function!
+        renderCover(ctx, config);
 
         const imgData = printCanvas.toDataURL('image/jpeg', 1.0);
         doc.addImage(imgData, 'JPEG', x - b, y - b, totalW + b * 2, totalH + b * 2);
@@ -719,130 +489,44 @@ function Editor(props) {
             {/* Main Controls Grid */}
             <div style={{ display: 'grid', 'grid-template-columns': '2fr 1fr', gap: '1rem', 'margin-bottom': '1rem' }}>
 
-                {/* Left Column: Content Inputs */}
-                <div class="glass-card" style={{ padding: '1rem', display: 'flex', 'flex-direction': 'column', gap: '1rem', height: '100%', 'box-sizing': 'border-box' }}>
-                    <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Artist</label>
-                            <input
-                                type="text"
-                                placeholder="Artist Name..."
-                                value={manualArtist()}
-                                onInput={(e) => setManualArtist(e.target.value)}
-                                style={{ width: '100%', 'box-sizing': 'border-box' }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Title</label>
-                            <input
-                                type="text"
-                                placeholder="Album Title..."
-                                value={manualTitle()}
-                                onInput={(e) => setManualTitle(e.target.value)}
-                                style={{ width: '100%', 'box-sizing': 'border-box' }}
-                            />
-                        </div>
-                    </div>
+                {/* Left Column: UI Controls imported through the custom hook/component */}
+                <ControlsPanel
+                    manualArtist={manualArtist()}
+                    setManualArtist={setManualArtist}
+                    manualTitle={manualTitle()}
+                    setManualTitle={setManualTitle}
+                    tracklistText={tracklistText()}
+                    setTracklistText={setTracklistText}
+                />
 
-                    <div style={{ display: 'flex', 'flex-direction': 'column', flex: 1 }}>
-                        <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.2rem', color: 'var(--text-secondary)' }}>Tracklist</label>
-                        <textarea
-                            value={tracklistText()}
-                            onInput={(e) => setTracklistText(e.target.value)}
-                            placeholder="1. Track One... (one per line)"
-                            style={{ width: '100%', 'box-sizing': 'border-box', 'font-family': 'monospace', padding: '0.5rem', resize: 'none', flex: 1 }}
-                        ></textarea>
-                    </div>
-                </div>
-
-                {/* Right Column: Upload & Style Tools */}
-                <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1rem' }}>
-                    {/* Image Upload */}
-                    <div class="glass-card" style={{ padding: '1rem' }}>
-                        <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.5rem', color: 'var(--text-secondary)' }}>Cover Image</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            style={{ width: '100%', 'max-width': '100%', 'box-sizing': 'border-box', 'font-size': '0.9em' }}
-                        />
-                        <div style={{ 'margin-top': '0.5rem', 'font-size': '0.75em', color: 'var(--text-secondary)' }}>
-                            <small>Click image to resize/crop.</small>
-                        </div>
-                    </div>
-
-                    {/* Style Bar */}
-                    <div class="glass-card" style={{ padding: '1rem', display: 'flex', 'flex-direction': 'column', gap: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '1rem', 'align-items': 'center', 'justify-content': 'space-between' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }} title="Background Color">
-                                <span style={{ 'font-size': '0.9em', 'font-weight': 'bold', color: 'var(--text-secondary)' }}>BG</span>
-                                <input
-                                    type="color"
-                                    value={backgroundColor()}
-                                    onInput={(e) => setBackgroundColor(e.target.value)}
-                                    style={{ width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer', background: 'none' }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem', 'align-items': 'center' }} title="Text Color">
-                                <span style={{ 'font-size': '0.9em', 'font-weight': 'bold', color: 'var(--text-secondary)' }}>Text</span>
-                                <input
-                                    type="color"
-                                    value={textColor()}
-                                    onInput={(e) => setTextColor(e.target.value)}
-                                    style={{ width: '30px', height: '30px', padding: 0, border: 'none', cursor: 'pointer', background: 'none' }}
-                                />
-                            </div>
-                        </div>
-                        <div style={{ height: '1px', background: 'var(--glass-border)' }}></div>
-                        <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '0.5rem' }}>
-                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Tracklist Font Size">
-                                <span>🔢</span>
-                                <input type="number" step="0.1" value={tracklistFontSize()} onInput={(e) => setTracklistFontSize(Number(e.target.value))} style={{ width: '100%' }} />
-                            </label>
-                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Line Spacing">
-                                <span>↕️</span>
-                                <input type="number" step="0.1" value={tracklistLinePadding()} onInput={(e) => setTracklistLinePadding(Number(e.target.value))} style={{ width: '100%' }} />
-                            </label>
-                            <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Spine Font Size">
-                                <span>📖</span>
-                                <input type="number" step="0.5" placeholder="Auto" value={spineFontSize() === 0 ? '' : spineFontSize()} onInput={(e) => setSpineFontSize(Number(e.target.value))} style={{ width: '100%' }} />
-                            </label>
-                        </div>
-                    </div>
-
-
-                    {/* Actions */}
-                    <div style={{ 'text-align': 'right', display: 'flex', 'justify-content': 'space-between', gap: '1rem', 'align-items': 'center' }}>
-                        <button onClick={exportPDF} style={{ 'font-weight': 'bold', 'padding': '0.4rem 0.8rem', 'font-size': '0.9em' }}>Download PDF</button>
-                        <button onClick={clearLocalStorage} style={{ padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid #e74c3c', color: '#e74c3c', 'font-size': '0.9em', 'border-radius': '4px', cursor: 'pointer' }}>
-                            🗑️ Reset
-                        </button>
-                    </div>
-                </div>
+                {/* Right Column: Styling Controls extracted to child */}
+                <StylePanel
+                    handleImageUpload={handleImageUpload}
+                    backgroundColor={backgroundColor()}
+                    setBackgroundColor={setBackgroundColor}
+                    textColor={textColor()}
+                    setTextColor={setTextColor}
+                    tracklistFontSize={tracklistFontSize()}
+                    setTracklistFontSize={setTracklistFontSize}
+                    tracklistLinePadding={tracklistLinePadding()}
+                    setTracklistLinePadding={setTracklistLinePadding}
+                    spineFontSize={spineFontSize()}
+                    setSpineFontSize={setSpineFontSize}
+                    exportPDF={exportPDF}
+                    clearLocalStorage={clearLocalStorage}
+                />    <strong>Dimensions (mm)</strong>
+                <span style={{ 'font-size': '1.2em' }}>{dimensionsExpanded() ? '▼' : '▶'}</span>
             </div>
 
-            {/* Collapsible Dimension Controls */}
-            <div class="controls glass-card" style={{ 'margin-bottom': '1rem', padding: '0.5rem 1rem' }}>
-                <div
-                    onClick={() => setDimensionsExpanded(!dimensionsExpanded())}
-                    style={{ cursor: 'pointer', display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'user-select': 'none' }}
-                >
-                    <strong>Dimensions (mm)</strong>
-                    <span style={{ 'font-size': '1.2em' }}>{dimensionsExpanded() ? '▼' : '▶'}</span>
+            {dimensionsExpanded() && (
+                <div style={{ 'margin-top': '1rem', display: 'flex', gap: '1rem', 'flex-wrap': 'wrap', 'justify-content': 'center' }}>
+                    <label>Rear: <input type="number" value={dimensions().backWidth} onInput={(e) => setDimensions({ ...dimensions(), backWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                    <label>Spine: <input type="number" value={dimensions().spineWidth} onInput={(e) => setDimensions({ ...dimensions(), spineWidth: Number(e.target.value) })} style={{ width: '40px' }} /></label>
+                    <label>Front: <input type="number" value={dimensions().frontWidth} onInput={(e) => setDimensions({ ...dimensions(), frontWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                    <label>Inside: <input type="number" value={dimensions().insideWidth} onInput={(e) => setDimensions({ ...dimensions(), insideWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
+                    <label>Height: <input type="number" value={dimensions().frontHeight} onInput={(e) => { const val = Number(e.target.value); setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val }) }} style={{ width: '50px' }} /></label>
                 </div>
-
-                {dimensionsExpanded() && (
-                    <div style={{ 'margin-top': '1rem', display: 'flex', gap: '1rem', 'flex-wrap': 'wrap', 'justify-content': 'center' }}>
-                        <label>Rear: <input type="number" value={dimensions().backWidth} onInput={(e) => setDimensions({ ...dimensions(), backWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                        <label>Spine: <input type="number" value={dimensions().spineWidth} onInput={(e) => setDimensions({ ...dimensions(), spineWidth: Number(e.target.value) })} style={{ width: '40px' }} /></label>
-                        <label>Front: <input type="number" value={dimensions().frontWidth} onInput={(e) => setDimensions({ ...dimensions(), frontWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                        <label>Inside: <input type="number" value={dimensions().insideWidth} onInput={(e) => setDimensions({ ...dimensions(), insideWidth: Number(e.target.value) })} style={{ width: '50px' }} /></label>
-                        <label>Height: <input type="number" value={dimensions().frontHeight} onInput={(e) => { const val = Number(e.target.value); setDimensions({ ...dimensions(), frontHeight: val, spineHeight: val, backHeight: val }) }} style={{ width: '50px' }} /></label>
-                    </div>
-                )}
-            </div>
-
-
+            )}
         </div>
     );
 }
