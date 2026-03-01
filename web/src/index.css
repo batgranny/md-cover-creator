@@ -161,3 +161,12 @@ input:focus {
 .theme-toggle:hover {
   background: var(--glass-border);
 }
+
+/* Always show number input spin buttons and add padding */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+  display: block;
+  margin-left: 8px;
+  padding: 4px;
+}
