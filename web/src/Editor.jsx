@@ -259,8 +259,12 @@ function Editor(props) {
     const screenToMm = (sx, sy) => {
         if (!canvasRef) return { x: 0, y: 0 };
         const rect = canvasRef.getBoundingClientRect();
-        const pxX = sx - rect.left;
-        const pxY = sy - rect.top;
+        const scaleX = canvasRef.width / rect.width;
+        const scaleY = canvasRef.height / rect.height;
+
+        const pxX = (sx - rect.left) * scaleX;
+        const pxY = (sy - rect.top) * scaleY;
+
         const scalePxPerMm = zoom() * 3.7795;
         const originX = (dimensions().bleed + dimensions().backWidth + dimensions().spineWidth) * scalePxPerMm;
         const originY = dimensions().bleed * scalePxPerMm;
@@ -274,7 +278,15 @@ function Editor(props) {
         const geo = getImgGeo();
         if (!geo) return;
 
-        const tol = 2 / zoom();
+        // Reset activeHandle on every new click
+        activeHandle = null;
+
+        // Increased tolerance to make corner boxes more easily selectable
+        const tol = 4 / zoom();
+
+        console.log(`Mouse Down! mmPos: x=${mmPos.x.toFixed(2)}, y=${mmPos.y.toFixed(2)}`);
+        console.log(`Image Geo! geo.x=${geo.x.toFixed(2)}, geo.y=${geo.y.toFixed(2)}, w=${geo.w.toFixed(2)}, h=${geo.h.toFixed(2)}`);
+        console.log(`Zoom: ${zoom().toFixed(2)}, Tol: ${tol.toFixed(2)}`);
 
         // Check if clicking on resize handles (only if image is selected)
         if (imageSelected()) {
@@ -285,13 +297,17 @@ function Editor(props) {
         }
 
         // Check if clicking on image body
-        if (mmPos.x > geo.x && mmPos.x < geo.x + geo.w && mmPos.y > geo.y && mmPos.y < geo.y + geo.h) {
-            if (!activeHandle) {
-                activeHandle = 'move';
-            }
+        let clickedInsideBody = (mmPos.x > geo.x && mmPos.x < geo.x + geo.w && mmPos.y > geo.y && mmPos.y < geo.y + geo.h);
+
+        if (activeHandle) {
+            // We clicked a resize handle. Keep image selected.
+            setImageSelected(true);
+        } else if (clickedInsideBody) {
+            // We clicked the image body. Set handle to move.
+            activeHandle = 'move';
             setImageSelected(true);
         } else {
-            // Clicked outside image
+            // Clicked outside image and outside handles
             setImageSelected(false);
             return;
         }
