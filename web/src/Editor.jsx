@@ -436,16 +436,34 @@ function Editor(props) {
         ctx.rotate(Math.PI / 2);
         ctx.fillStyle = textColor();
         ctx.textBaseline = 'middle';
-        const fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
+        let fontSize = spineFontSize() > 0 ? spineFontSize() : dimensions().spineWidth * 0.85;
+
+        const artistStr = artistName.toUpperCase();
+        const titleStr = albumTitle.toUpperCase();
+
+        // Calculate required width and scale down if necessary
         ctx.font = `${fontSize}px 'Anton', sans-serif`;
+        const artistWidth = ctx.measureText(artistStr).width;
+        const titleWidth = ctx.measureText(titleStr).width;
+        const totalTextWidth = artistWidth + titleWidth;
+
+        // Available space is spineHeight minus padding (2mm on each side + 4mm gap in middle)
+        const availableSpineSpace = dimensions().spineHeight - 8;
+
+        if (totalTextWidth > availableSpineSpace && availableSpineSpace > 0) {
+            // Scale down the font size proportionally so both fit
+            const scaleFactor = availableSpineSpace / totalTextWidth;
+            fontSize = fontSize * scaleFactor;
+            ctx.font = `${fontSize}px 'Anton', sans-serif`;
+        }
 
         // Artist on left (top when rotated)
         ctx.textAlign = 'left';
-        ctx.fillText(artistName.toUpperCase(), -dimensions().spineHeight / 2 + 2, 0.5);
+        ctx.fillText(artistStr, -dimensions().spineHeight / 2 + 2, 0.5);
 
         // Title on right (bottom when rotated)
         ctx.textAlign = 'right';
-        ctx.fillText(albumTitle.toUpperCase(), dimensions().spineHeight / 2 - 2, 0.5);
+        ctx.fillText(titleStr, dimensions().spineHeight / 2 - 2, 0.5);
         ctx.restore();
 
         // Rear Tab Text (Far Left)
@@ -464,9 +482,20 @@ function Editor(props) {
         ctx.textBaseline = 'middle';
 
         // Fit to tab width (backWidth default 11mm).
-        const antonSize = dimensions().backWidth * 0.9;
+        let antonSize = dimensions().backWidth * 0.9;
         ctx.font = `${antonSize}px 'Anton', sans-serif`;
-        ctx.fillText(artistName.toUpperCase(), 0, 0);
+
+        // Scale down if artist name exceeds rear tab height
+        const rearArtistWidth = ctx.measureText(artistStr).width;
+        const availableRearSpace = dimensions().backHeight - 2; // 2mm total padding
+
+        if (rearArtistWidth > availableRearSpace && availableRearSpace > 0) {
+            const rearScaleFactor = availableRearSpace / rearArtistWidth;
+            antonSize = antonSize * rearScaleFactor;
+            ctx.font = `${antonSize}px 'Anton', sans-serif`;
+        }
+
+        ctx.fillText(artistStr, 0, 0);
         ctx.restore();
 
         if (tracklistText()) {
