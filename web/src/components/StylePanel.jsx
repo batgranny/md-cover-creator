@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { CustomNumberInput } from './CustomNumberInput';
 
 export function StylePanel(props) {
     return (
@@ -43,33 +44,16 @@ export function StylePanel(props) {
                 <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '0.5rem' }}>
                     <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Tracklist Font Size">
                         <span>🔢</span>
-                        <input type="number" step="0.1" value={props.tracklistFontSize} onInput={(e) => props.setTracklistFontSize(Number(e.target.value))} style={{ width: '100%' }} />
+                        <CustomNumberInput step="0.1" value={props.tracklistFontSize} onInput={props.setTracklistFontSize} style={{ width: '100%' }} />
                     </label>
                     <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Tracklist Line Spacing">
                         <span>↕️</span>
-                        <input type="number" step="0.1" value={props.tracklistLinePadding} onInput={(e) => props.setTracklistLinePadding(Number(e.target.value))} style={{ width: '100%' }} />
+                        <CustomNumberInput step="0.1" value={props.tracklistLinePadding} onInput={props.setTracklistLinePadding} style={{ width: '100%' }} />
                     </label>
-                </div>
-                <div style={{ height: '1px', background: 'var(--glass-border)' }}></div>
-                <div>
-                    <label style={{ display: 'block', 'font-size': '0.8em', 'margin-bottom': '0.5rem', color: 'var(--text-secondary)' }}>Spine Font Auto-Shrink</label>
-                    <div style={{ display: 'flex', 'align-items': 'center', gap: '0.5rem' }}>
-                        <input
-                            type="checkbox"
-                            checked={props.spineFontSize === 0}
-                            onChange={(e) => props.setSpineFontSize(e.target.checked ? 0 : 4.5)}
-                        />
-                        <span style={{ 'font-size': '0.8em' }}>Auto-fit</span>
-                        {props.spineFontSize > 0 && (
-                            <input
-                                type="number"
-                                step="0.1"
-                                value={props.spineFontSize}
-                                onInput={(e) => props.setSpineFontSize(Number(e.target.value))}
-                                style={{ width: '60px', 'margin-left': 'auto' }}
-                            />
-                        )}
-                    </div>
+                    <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Spine Font Size">
+                        <span>📖</span>
+                        <CustomNumberInput step="0.5" placeholder="Auto" value={props.spineFontSize} onInput={props.setSpineFontSize} style={{ width: '100%' }} />
+                    </label>
                 </div>
             </div>
 
