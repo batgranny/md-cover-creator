@@ -163,10 +163,22 @@ input:focus {
 }
 
 /* Always show number input spin buttons and add padding */
+input[type="number"] {
+  appearance: auto;
+  -moz-appearance: auto;
+  padding-right: 15px !important;
+  /* Right edge padding for Safari */
+}
+
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
-  display: block;
-  margin-left: 8px;
-  padding: 4px;
+  appearance: inner-spin-button !important;
+  -webkit-appearance: inner-spin-button !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  cursor: pointer;
+  /* Safari requires block or default, not flex */
+  margin-left: 8px !important;
+  padding: 4px !important;
 }
