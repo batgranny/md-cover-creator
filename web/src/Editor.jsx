@@ -466,6 +466,8 @@ function Editor(props) {
         doc.line(insideFoldX, y - co, insideFoldX, y - co - foldMarkLength);
         doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
 
+        const safeName = (str) => (str || '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
         // Fallback if safeName returns empty string or just underscores
         const finalArtist = safeName(getArtistName()) || 'Artist';
         const finalAlbum = safeName(getAlbumTitle()) || 'Album';
