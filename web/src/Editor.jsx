@@ -467,8 +467,8 @@ function Editor(props) {
         doc.line(insideFoldX, y + totalH + co, insideFoldX, y + totalH + co + foldMarkLength);
 
         // Fallback if safeName returns empty string or just underscores
-        const finalArtist = safeName(artistName) || 'Artist';
-        const finalAlbum = safeName(albumTitle) || 'Album';
+        const finalArtist = safeName(getArtistName()) || 'Artist';
+        const finalAlbum = safeName(getAlbumTitle()) || 'Album';
 
         const filename = `${finalArtist}-${finalAlbum}-jcard.pdf`;
         console.log("Saving PDF with explicit Blob and file-saver:", filename);
