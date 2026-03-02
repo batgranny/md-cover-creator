@@ -56,7 +56,7 @@ export function StylePanel(props) {
                     </label>
                     <label style={{ 'font-size': '0.8em', display: 'flex', 'align-items': 'center', gap: '0.5rem' }} title="Spine Text Offset">
                         <span>↔️</span>
-                        <CustomNumberInput step="1" value={props.spineOffset} onInput={props.setSpineOffset} style={{ width: '100%' }} />
+                        <CustomNumberInput step="0.1" value={props.spineOffset} onInput={props.setSpineOffset} style={{ width: '100%' }} />
                     </label>
                 </div>
             </div>
