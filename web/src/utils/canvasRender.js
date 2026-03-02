@@ -102,7 +102,8 @@ export const renderCover = (ctx, config) => {
     // Spine Text - Artist on left (top), Title on right (bottom)
     ctx.save();
     const spineX = dimensions.backWidth + dimensions.spineWidth / 2;
-    const spineY = dimensions.spineHeight / 2;
+    const sOffset = config.spineOffset || 0;
+    const spineY = dimensions.spineHeight / 2 - sOffset;
     ctx.translate(spineX, spineY);
     ctx.rotate(Math.PI / 2);
     ctx.fillStyle = textColor;
