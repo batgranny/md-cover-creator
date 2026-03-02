@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
     TRACKLIST_FONT_SIZE: 'md-cover-tracklist-font-size',
     TRACKLIST_LINE_PADDING: 'md-cover-tracklist-line-padding',
     SPINE_FONT_SIZE: 'md-cover-spine-font-size',
+    SPINE_OFFSET: 'md-cover-spine-offset',
     TRACKLIST_TEXT: 'md-cover-tracklist-text'
 };
 
@@ -51,6 +52,7 @@ function Editor(props) {
     const [tracklistFontSize, setTracklistFontSize] = createSignal(3.2);
     const [tracklistLinePadding, setTracklistLinePadding] = createSignal(1.4);
     const [spineFontSize, setSpineFontSize] = createSignal(0); // 0 = Auto
+    const [spineOffset, setSpineOffset] = createSignal(0);
     const [tracklistText, setTracklistText] = createSignal('');
 
     // Image Selection State
@@ -164,6 +166,7 @@ function Editor(props) {
             const savedFontSize = localStorage.getItem(STORAGE_KEYS.TRACKLIST_FONT_SIZE);
             const savedLinePadding = localStorage.getItem(STORAGE_KEYS.TRACKLIST_LINE_PADDING);
             const savedSpineFontSize = localStorage.getItem(STORAGE_KEYS.SPINE_FONT_SIZE);
+            const savedSpineOffset = localStorage.getItem(STORAGE_KEYS.SPINE_OFFSET);
             const savedTracklistText = localStorage.getItem(STORAGE_KEYS.TRACKLIST_TEXT);
             const savedImage = localStorage.getItem(STORAGE_KEYS.UPLOADED_IMAGE);
 
@@ -175,6 +178,7 @@ function Editor(props) {
             if (savedFontSize) setTracklistFontSize(parseFloat(savedFontSize));
             if (savedLinePadding) setTracklistLinePadding(parseFloat(savedLinePadding));
             if (savedSpineFontSize) setSpineFontSize(parseFloat(savedSpineFontSize));
+            if (savedSpineOffset) setSpineOffset(parseFloat(savedSpineOffset));
             // Only restore text if we are in "manual" mode (Start from Scratch) to avoid overriding a fresh MB search?
             // actually if we have a saved text we probably want it?
             if (savedTracklistText) setTracklistText(savedTracklistText);
@@ -228,6 +232,10 @@ function Editor(props) {
     });
 
     createEffect(() => {
+        if (!isResetting) localStorage.setItem(STORAGE_KEYS.SPINE_OFFSET, spineOffset());
+    });
+
+    createEffect(() => {
         if (!isResetting) localStorage.setItem(STORAGE_KEYS.TRACKLIST_TEXT, tracklistText());
     });
 
@@ -242,6 +250,7 @@ function Editor(props) {
         tracklistFontSize();
         tracklistLinePadding();
         spineFontSize();
+        spineOffset();
         manualArtist();
         manualTitle();
         tracklistText();
@@ -373,6 +382,7 @@ function Editor(props) {
             artistName: getArtistName(),
             albumTitle: getAlbumTitle(),
             spineFontSize: spineFontSize(),
+            spineOffset: spineOffset(),
             tracklistText: tracklistText(),
             tracklistFontSize: tracklistFontSize(),
             tracklistLinePadding: tracklistLinePadding(),
@@ -416,6 +426,7 @@ function Editor(props) {
             artistName: getArtistName(),
             albumTitle: getAlbumTitle(),
             spineFontSize: spineFontSize(),
+            spineOffset: spineOffset(),
             tracklistText: tracklistText(),
             tracklistFontSize: tracklistFontSize(),
             tracklistLinePadding: tracklistLinePadding(),
@@ -513,6 +524,8 @@ function Editor(props) {
                     setTracklistLinePadding={setTracklistLinePadding}
                     spineFontSize={spineFontSize()}
                     setSpineFontSize={setSpineFontSize}
+                    spineOffset={spineOffset()}
+                    setSpineOffset={setSpineOffset}
                     exportPDF={exportPDF}
                     clearLocalStorage={clearLocalStorage}
                 />
