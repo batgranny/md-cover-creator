@@ -11,7 +11,7 @@ import (
 const (
 	BaseURL = "https://musicbrainz.org/ws/2"
 	// UserAgent is required by MusicBrainz API
-	UserAgent = "MiniDiscCoverCreator/1.0.0 ( contact@example.com )"
+	UserAgent = "MiniDiscCoverCreator/1.0.0 ( https://github.com/batgranny/md-cover-creator )"
 )
 
 type Client struct {
