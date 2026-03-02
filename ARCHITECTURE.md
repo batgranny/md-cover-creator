@@ -39,8 +39,14 @@ md-cover-creator/
 ├── web/
 │   ├── dist/                    # Built frontend (generated)
 │   ├── src/
+│   │   ├── components/          # Reusable UI components
+│   │   │   ├── ControlsPanel.jsx  # Text inputs
+│   │   │   ├── StylePanel.jsx     # Styling and image controls
+│   │   │   └── CustomNumberInput.jsx # Cross-browser spinner
+│   │   ├── utils/
+│   │   │   └── canvasRender.js  # Abstracted layout math
 │   │   ├── App.jsx              # Main application component
-│   │   ├── Editor.jsx           # J-card canvas editor
+│   │   ├── Editor.jsx           # Main container managing state
 │   │   ├── index.css            # Global styles and theme
 │   │   └── index.jsx            # SolidJS entry point
 │   ├── index.html               # HTML template
@@ -102,7 +108,10 @@ The main application component manages:
 
 #### Editor Component (`web/src/Editor.jsx`)
 
-The core J-card editor with canvas-based rendering. This is the most complex component.
+The core application container that manages the state for the J-card. It delegates all complex canvas rendering math to `web/src/utils/canvasRender.js` while handling child components:
+
+- **`<ControlsPanel />`**: Left-hand sidebar text fields
+- **`<StylePanel />`**: Right-hand styling controls and image uploads
 
 ##### Dimensions System
 
@@ -136,11 +145,11 @@ The canvas uses a **scale factor** to convert mm to pixels for display and PDF e
 
 ##### Key Functions
 
-###### `draw()`
-Renders the J-card to the canvas for preview:
+###### Rendering Engine (`web/src/utils/canvasRender.js`)
+The `renderCover(ctx, config)` function creates identical geometric output for both the live browser `<canvas>` preview and the hidden `jsPDF` context. It handles:
 
-1. **Setup**: Clears canvas, applies scale factor
-2. **Background**: Fills with white
+1. **Setup**: Clears context, applies scale factor
+2. **Background**: Fills with user-selected color
 3. **Front Panel** (left):
    - Draws cover image (if loaded) with user positioning/scaling
    - Draws resize handles (8x8mm squares at corners)
@@ -160,8 +169,8 @@ Renders the J-card to the canvas for preview:
    - Blue dashed: Fold lines
    - Grey dashed: Bleed lines
 
-###### `exportPDF()`
-Generates a print-ready PDF:
+###### `exportPDF()` (in `Editor.jsx`)
+Generates a print-ready PDF using the shared `renderCover` engine:
 
 1. Creates jsPDF document in landscape A4 format
 2. Renders identical content to `draw()` but at higher resolution
@@ -230,6 +239,8 @@ q.Set("inc", "artist-credits+recordings")
 ```
 
 Without this, the artist name will be `undefined` on the frontend.
+
+**ABUSE PREVENTION**: The `net/http` client must use an easily identifiable `User-Agent` header containing the repository URL. Generic emails or empty agents trigger immediate "Connection Reset By Peer" due to Hetzner/MusicBrainz firewall rules.
 
 ### Font Loading
 
